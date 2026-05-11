@@ -253,6 +253,10 @@ export default function App() {
   const [userRole, setUserRole] = useState<string>("user");
   const [userStatus, setUserStatus] = useState<string>("loading");
 
+const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+  const [isExpandedRevisionOutline, setIsExpandedRevisionOutline] = useState(false);
+  const [isExpandedRevisionPage, setIsExpandedRevisionPage] = useState(false);
+
   const { user, logout } = useAuth();
 
   const fetchProjects = async () => {
@@ -957,6 +961,37 @@ export default function App() {
             )}
           </ul>
 
+          {/* FOOTER LINKS */}
+          <div className="px-6 py-4 flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5 p-3 rounded-2xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100/50 dark:border-blue-800/30">
+              <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center mb-1">Our Ecosystem</p>
+              <div className="flex flex-col gap-2">
+                <a 
+                  href="https://pakhusnul.id" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="flex items-center justify-between group"
+                >
+                  <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400 group-hover:text-blue-600 transition-colors">pakhusnul.id</span>
+                  <div className="w-5 h-5 rounded-lg bg-white dark:bg-slate-800 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity border border-slate-100 dark:border-slate-700">
+                    <ChevronRight className="w-3 h-3 text-blue-500" />
+                  </div>
+                </a>
+                <a 
+                  href="https://aidukasi.net" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="flex items-center justify-between group"
+                >
+                  <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400 group-hover:text-blue-600 transition-colors">aidukasi.net</span>
+                  <div className="w-5 h-5 rounded-lg bg-white dark:bg-slate-800 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity border border-slate-100 dark:border-slate-700">
+                    <ChevronRight className="w-3 h-3 text-blue-500" />
+                  </div>
+                </a>
+              </div>
+            </div>
+          </div>
+
           {/* USER PROFILE SECTION */}
           <div className="mt-auto p-4 border-t border-slate-200 dark:border-slate-800">
             <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 flex flex-col gap-3">
@@ -1448,17 +1483,25 @@ export default function App() {
                             <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Mode Bilingual (ID-EN)</span>
                           </label>
 
-                          <div className="flex flex-col gap-1.5 mt-2">
+                          <div className="flex flex-col gap-1.5 mt-2 group relative">
                             <div className="flex justify-between items-center">
                               <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Pesan Khusus AI</label>
-                              <button onClick={handleSuggestVisual} disabled={isSuggestingVisual} className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 font-bold flex items-center gap-1 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded-md">
-                                {isSuggestingVisual ? <Loader2 className="w-3 h-3 animate-spin"/> : '✨'} Magic Prompt
-                              </button>
+                              <div className="flex items-center gap-2">
+                                <button 
+                                  onClick={() => setIsExpandedMagicPrompt(!isExpandedMagicPrompt)}
+                                  className="p-1 px-1.5 bg-slate-100 dark:bg-slate-800 rounded-md text-slate-400 hover:text-blue-500 transition-colors border border-slate-200 dark:border-slate-700"
+                                >
+                                  {isExpandedMagicPrompt ? <RefreshCw className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
+                                </button>
+                                <button onClick={handleSuggestVisual} disabled={isSuggestingVisual} className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 font-bold flex items-center gap-1 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded-md">
+                                  {isSuggestingVisual ? <Loader2 className="w-3 h-3 animate-spin"/> : '✨'} Magic Prompt
+                                </button>
+                              </div>
                             </div>
                             <textarea 
                               name="pesanKhusus" value={formData.pesanKhusus} onChange={handleChange} 
                               placeholder="Misal: Gunakan scene pantai di Indonesia pada seluruh halamannya..."
-                              className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 rounded-xl px-4 py-3 outline-none focus:border-blue-500 min-h-[100px] resize-y"
+                              className={`w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 rounded-xl px-4 py-3 outline-none focus:border-blue-500 transition-all ${isExpandedMagicPrompt ? 'min-h-[250px]' : 'min-h-[100px]'} resize-y`}
                             />
                           </div>
                         </div>
@@ -1507,25 +1550,35 @@ export default function App() {
                       onChange={(e) => setOutlineText(e.target.value)}
                       className="w-full h-[300px] bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-6 rounded-xl font-mono text-sm leading-relaxed text-slate-800 dark:text-slate-300 resize-none outline-none focus:ring-2 focus:ring-blue-500"
                     />
-                    <div className="flex gap-2 mt-4 items-start bg-blue-50 dark:bg-blue-900/10 p-3 rounded-xl border border-blue-100 dark:border-blue-800/50">
+                    <div className={`flex gap-2 mt-4 items-start bg-blue-50 dark:bg-blue-900/10 p-3 rounded-xl border border-blue-100 dark:border-blue-800/50 relative group transition-all ${isExpandedRevisionOutline ? 'min-h-[150px]' : ''}`}>
                       <textarea 
                         value={revisionInput} onChange={(e) => setRevisionInput(e.target.value)}
                         placeholder="Revisi outline di sini... (tekan Revisi untuk memproses)" 
-                        className="flex-1 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 outline-none w-full bg-slate-50 dark:bg-slate-950 dark:text-white resize-none min-h-[50px] max-h-[200px]"
-                        rows={1}
+                        className={`flex-1 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 outline-none w-full bg-slate-50 dark:bg-slate-950 dark:text-white transition-all ${isExpandedRevisionOutline ? 'min-h-[120px]' : 'min-h-[50px] max-h-[200px]'}`}
+                        rows={isExpandedRevisionOutline ? 4 : 1}
                         onInput={(e) => {
-                          const target = e.target as HTMLTextAreaElement;
-                          target.style.height = 'auto';
-                          target.style.height = target.scrollHeight + 'px';
+                          if (!isExpandedRevisionOutline) {
+                            const target = e.target as HTMLTextAreaElement;
+                            target.style.height = 'auto';
+                            target.style.height = target.scrollHeight + 'px';
+                          }
                         }}
                       />
-                      <button 
-                        onClick={handleReviseOutline} disabled={isRevising || !revisionInput.trim()}
-                        className="bg-blue-600 text-white px-5 py-3 rounded-xl font-bold flex items-center gap-2 self-end shadow-md transition-all active:scale-95"
-                      >
-                        {isRevising ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} 
-                        <span className="hidden sm:inline">Revisi</span>
-                      </button>
+                      <div className="flex flex-col gap-2 self-end">
+                        <button 
+                          onClick={() => setIsExpandedRevisionOutline(!isExpandedRevisionOutline)}
+                          className="p-2 bg-white/80 dark:bg-slate-800/80 rounded-lg border border-slate-100 dark:border-slate-700 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          {isExpandedRevisionOutline ? <RefreshCw className="w-3.5 h-3.5 rotate-180" /> : <Plus className="w-3.5 h-3.5" />}
+                        </button>
+                        <button 
+                          onClick={handleReviseOutline} disabled={isRevising || !revisionInput.trim()}
+                          className="bg-blue-600 text-white px-5 py-3 rounded-xl font-bold flex items-center gap-2 shadow-md transition-all active:scale-95"
+                        >
+                          {isRevising ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} 
+                          <span className="hidden sm:inline">Revisi</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                   <div className="flex justify-end gap-3 pb-8">
@@ -1596,19 +1649,22 @@ export default function App() {
                         </h3>
                         <button 
                           onClick={() => pageData[activeTab]?.data && copyToClipboard(JSON.stringify(pageData[activeTab].data, null, 2))}
-                          className={`flex items-center gap-2 px-5 py-2.5 border rounded-xl transition-all font-bold text-sm ${
+                          className={`flex items-center justify-center gap-2 px-3 sm:px-5 py-2.5 border rounded-xl transition-all font-bold text-xs sm:text-sm ${
                             copied 
-                              ? 'bg-emerald-50 border-emerald-500 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400' 
-                              : 'bg-white border-slate-200 dark:bg-slate-800 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm'
+                              ? 'bg-emerald-500 border-emerald-600 text-white shadow-lg' 
+                              : 'bg-blue-600 border-blue-700 text-white hover:bg-blue-700 shadow-md shadow-blue-500/20 active:scale-95'
                           }`}
+                          title="Salin JSON"
                         >
                           {copied ? (
                             <>
-                              <CheckCircle className="w-4 h-4" /> Berhasil Copied!
+                              <CheckCircle className="w-5 h-5 sm:w-4 sm:h-4" /> 
+                              <span className="hidden sm:inline">Berhasil Copied!</span>
                             </>
                           ) : (
                             <>
-                              <Copy className="w-4 h-4" /> Salin JSON
+                              <Copy className="w-5 h-5 sm:w-4 sm:h-4 text-white" /> 
+                              <span className="hidden sm:inline">Salin JSON</span>
                             </>
                           )}
                         </button>
@@ -1651,9 +1707,9 @@ export default function App() {
 
                         {/* REVISION CHAT BAR */}
                         {pageData[activeTab]?.data && (
-                          <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-white via-white/95 to-transparent dark:from-slate-900 dark:via-slate-900/95 z-30">
-                            <div className="max-w-3xl mx-auto flex items-end gap-3 p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl shadow-blue-500/10 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all">
-                              <div className="flex-1 flex items-start px-2 py-1">
+                          <div className={`absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-white via-white/95 to-transparent dark:from-slate-900 dark:via-slate-900/95 z-30 transition-all ${isExpandedRevisionPage ? 'h-1/2' : 'h-auto'}`}>
+                            <div className={`max-w-3xl mx-auto flex items-end gap-3 p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl shadow-blue-500/10 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all relative group ${isExpandedRevisionPage ? 'h-full flex-col p-4' : ''}`}>
+                              <div className={`flex-1 flex items-start px-2 py-1 overflow-y-auto ${isExpandedRevisionPage ? 'w-full' : ''}`}>
                                 <Sparkles className="w-4 h-4 text-blue-500 mt-1 mr-2 flex-shrink-0" />
                                 <textarea 
                                   value={revisionInput}
@@ -1665,26 +1721,40 @@ export default function App() {
                                     }
                                   }}
                                   onInput={(e) => {
-                                    const target = e.target as HTMLTextAreaElement;
-                                    target.style.height = 'auto';
-                                    target.style.height = Math.min(target.scrollHeight, 150) + 'px';
+                                    if (!isExpandedRevisionPage) {
+                                      const target = e.target as HTMLTextAreaElement;
+                                      target.style.height = 'auto';
+                                      target.style.height = Math.min(target.scrollHeight, 150) + 'px';
+                                    }
                                   }}
                                   placeholder="Minta revisi... (Shift+Enter untuk baris baru)"
-                                  className="w-full bg-transparent border-none outline-none text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400 resize-none max-h-[150px] py-0.5"
+                                  className={`w-full bg-transparent border-none outline-none text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400 resize-none py-0.5 ${isExpandedRevisionPage ? 'h-full' : 'max-h-[150px]'}`}
                                   rows={1}
                                 />
                               </div>
-                              <button 
-                                onClick={handleRevisePageJSON}
-                                disabled={!revisionInput.trim() || pageData[activeTab]?.loading}
-                                className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 dark:disabled:bg-slate-700 text-white p-2.5 rounded-xl transition-all active:scale-90 flex-shrink-0"
-                              >
-                                {pageData[activeTab]?.loading ? (
-                                  <Loader2 className="w-5 h-5 animate-spin" />
-                                ) : (
-                                  <Send className="w-5 h-5" />
-                                )}
-                              </button>
+                              <div className={`flex gap-3 items-center ${isExpandedRevisionPage ? 'w-full justify-between pt-2 border-t border-slate-100 dark:border-slate-700' : ''}`}>
+                                <button 
+                                  onClick={() => setIsExpandedRevisionPage(!isExpandedRevisionPage)}
+                                  className="p-2 text-slate-400 hover:text-blue-500 transition-colors opacity-0 group-hover:opacity-100"
+                                  title={isExpandedRevisionPage ? "Kecilkan" : "Perbesar"}
+                                >
+                                  {isExpandedRevisionPage ? <RefreshCw className="w-4 h-4 rotate-180" /> : <Plus className="w-4 h-4" />}
+                                </button>
+                                <button 
+                                  onClick={handleRevisePageJSON}
+                                  disabled={!revisionInput.trim() || pageData[activeTab]?.loading}
+                                  className={`bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 dark:disabled:bg-slate-700 text-white rounded-xl transition-all active:scale-90 flex-shrink-0 flex items-center justify-center gap-2 ${isExpandedRevisionPage ? 'px-6 py-2.5 font-bold' : 'p-2.5'}`}
+                                >
+                                  {pageData[activeTab]?.loading ? (
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                  ) : (
+                                    <>
+                                      <Send className="w-5 h-5" />
+                                      {isExpandedRevisionPage && <span>Kirim Revisi</span>}
+                                    </>
+                                  )}
+                                </button>
+                              </div>
                             </div>
                           </div>
                         )}

@@ -1,0 +1,22 @@
+{
+  "name": "LKPD Generator Pro",
+  "short_name": "LKPD Pro",
+  "description": "AI-Powered Worksheet Generator for Educators",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "https://pakhusnul.id/favicon.ico",
+      "sizes": "64x64",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "https://aidukasi.net/wp-content/uploads/2023/12/logo-bulat.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
