@@ -23,5 +23,18 @@
 11. **Terminal State Bypass**: (If applicable, e.g., locking a "finalized" LKPD).
 12. **Unverified Email Access**: Attempt access with an unverified email (if required).
 
+## Red Team Audit Findings
+| Attack Vector | Status | Security Gate |
+|---------------|--------|---------------|
+| Identity Spoofing | BLOCKED | `data.uid == request.auth.uid` |
+| Profile Hijacking | BLOCKED | `isOwner(userId)` |
+| Ghost Field Injection | BLOCKED | `affectedKeys().hasOnly([...])` |
+| Resource Poisoning | BLOCKED | `isValidId(id)` and `.size()` limits |
+| Data Orphanage | BLOCKED | `data.userId == request.auth.uid` |
+| Unauthorized Access | BLOCKED | `existing().userId == request.auth.uid` |
+| Timestamp Mutation | BLOCKED | `incoming().createdAt == request.time` and immutable update |
+| Blind Query Scraping | BLOCKED | `resource.data.userId == request.auth.uid` in list rule |
+| Admin Spoofing | BLOCKED | `request.auth.token.email_verified == true` + `isAdmin()` check |
+
 ## Firestore Rules Draft
 (See `firestore.rules`)

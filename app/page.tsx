@@ -251,6 +251,7 @@ export default function App() {
   const [formData, setFormData] = useState(defaultFormData);
   const [isMounted, setIsMounted] = useState(false);
   const [userRole, setUserRole] = useState<string>("user");
+  const [userStatus, setUserStatus] = useState<string>("loading");
 
   const { user, logout } = useAuth();
 
@@ -353,19 +354,33 @@ export default function App() {
     console.log("App Mounted", { isDarkMode, formData, user: user?.email });
     setIsMounted(true);
     
-    // Check role if user exists
+    // Check role and status if user exists
     if (user) {
-      const fetchRole = async () => {
+      const fetchUserData = async () => {
         try {
           const userSnap = await getDoc(doc(db, "users", user.uid));
           if (userSnap.exists()) {
-            setUserRole(userSnap.data().role || "user");
+            const data = userSnap.data();
+            setUserRole(data.role || "user");
+            setUserStatus(data.status || "pending");
+          } else {
+            // Handle initial login case for primary admin
+            if (user.email === "jagofeed@gmail.com") {
+              setUserRole("admin");
+              setUserStatus("active");
+            } else {
+              setUserRole("user");
+              setUserStatus("pending");
+            }
           }
         } catch (e) {
           handleFirestoreError(e, OperationType.GET, `users/${user.uid}`);
+          setUserStatus("error");
         }
       };
-      fetchRole();
+      fetchUserData();
+    } else {
+      setUserStatus("unauthenticated");
     }
 
     // Load BYOK Keys
@@ -553,7 +568,7 @@ export default function App() {
         Tolong perbarui outline di atas sesuai dengan permintaan revisi. 
         Pastikan format tetap rapi dan keluarkan HANYA teks outline yang sudah direvisi.
       `;
-      const result = await callGeminiAPI(userPrompt, SYSTEM_PROMPT, false);
+      const result = await callGeminiAPI(userPrompt, SYSTEM_PROMPT, false, userRole, userApiKeys);
       if (result) {
         setOutlineText(result.trim());
         setRevisionInput("");
@@ -633,7 +648,7 @@ export default function App() {
         - Jangan kurangi kualitas detail visual_prompt-nya.
       `;
       
-      const resultText = await callGeminiAPI(userPrompt, SYSTEM_PROMPT, true);
+      const resultText = await callGeminiAPI(userPrompt, SYSTEM_PROMPT, true, userRole, userApiKeys);
       const parsedData = resultText ? extractJSON(resultText) : null;
       
       if (parsedData) {
@@ -708,7 +723,7 @@ export default function App() {
         }
       `;
       
-      const resultText = await callGeminiAPI(userPrompt, SYSTEM_PROMPT, true);
+      const resultText = await callGeminiAPI(userPrompt, SYSTEM_PROMPT, true, userRole, userApiKeys);
       const parsedData = resultText ? extractJSON(resultText) : null;
       
       setPageData((prev: any) => ({ 
@@ -764,12 +779,77 @@ export default function App() {
   const guruTabs = Array.from({ length: numGuruPages }, (_, i) => `Guru ${i + 1}`);
 
   // Mencegah Hydration Error yang mematikan fungsi tombol
-  if (!isMounted) {
+  if (!isMounted || userStatus === "loading") {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-slate-50 dark:bg-slate-950">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-12 h-12 animate-spin text-blue-600" />
-          <p className="text-slate-500 animate-pulse font-medium">Memuat LKPD Generator Pro...</p>
+          <p className="text-slate-500 animate-pulse font-medium">Memverifikasi Akun...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Pending Approval View
+  if (userStatus === "pending" && userRole !== "admin") {
+    return (
+      <div className={`${isDarkMode ? 'dark' : ''} antialiased h-screen w-full bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4 transition-colors duration-300`}>
+        <div className="max-w-md w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 shadow-xl shadow-blue-500/5 text-center animate-in fade-in zoom-in duration-500">
+          <div className="w-20 h-20 bg-amber-50 dark:bg-amber-900/20 rounded-3xl flex items-center justify-center text-amber-500 mx-auto mb-6 relative">
+            <Clock className="w-10 h-10 animate-pulse" />
+            <div className="absolute top-0 right-0 w-6 h-6 bg-amber-500 text-white rounded-full flex items-center justify-center border-4 border-white dark:border-slate-900">
+              <Plus className="w-3 h-3 rotate-45" />
+            </div>
+          </div>
+          
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Menunggu Persetujuan</h1>
+          <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-8">
+            Akun Anda (<span className="font-bold text-slate-700 dark:text-slate-200">{user?.email}</span>) telah terdaftar, namun perlu diverifikasi oleh Administrator sebelum dapat menggunakan fitur generator.
+          </p>
+          
+          <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-2xl mb-8">
+            <p className="text-xs text-blue-700 dark:text-blue-400 font-medium">
+              Proses verifikasi biasanya memakan waktu kurang dari 24 jam. Silakan hubungi tim IT atau Admin jika ada pertanyaan.
+            </p>
+          </div>
+          
+          <div className="flex flex-col gap-3">
+            <button 
+              onClick={() => window.location.reload()}
+              className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all active:scale-95 flex items-center justify-center gap-2"
+            >
+              <RefreshCw className="w-4 h-4" /> Cek Status Sekarang
+            </button>
+            <button 
+              onClick={() => logout()}
+              className="w-full py-3.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 rounded-xl font-bold transition-all flex items-center justify-center gap-2"
+            >
+              <LogOut className="w-4 h-4" /> Keluar Aplikasi
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Suspended View
+  if (userStatus === "suspended") {
+    return (
+      <div className={`${isDarkMode ? 'dark' : ''} antialiased h-screen w-full bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4 transition-colors duration-300`}>
+        <div className="max-w-md w-full bg-white dark:bg-slate-900 border border-red-200 dark:border-red-900 rounded-3xl p-8 shadow-xl shadow-red-500/5 text-center">
+          <div className="w-20 h-20 bg-red-50 dark:bg-red-900/20 rounded-3xl flex items-center justify-center text-red-500 mx-auto mb-6">
+            <ShieldAlert className="w-10 h-10" />
+          </div>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Akun Ditangguhkan</h1>
+          <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-8">
+            Akses Anda ke aplikasi telah dinonaktifkan oleh administrator. Silakan hubungi dukungan jika Anda merasa ini adalah kesalahan.
+          </p>
+          <button 
+            onClick={() => logout()}
+            className="w-full py-3.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold transition-all"
+          >
+            Log Out
+          </button>
         </div>
       </div>
     );
@@ -1378,7 +1458,7 @@ export default function App() {
                             <textarea 
                               name="pesanKhusus" value={formData.pesanKhusus} onChange={handleChange} 
                               placeholder="Misal: Gunakan scene pantai di Indonesia pada seluruh halamannya..."
-                              className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 rounded-xl px-4 py-3 outline-none focus:border-blue-500 h-24 resize-none"
+                              className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 rounded-xl px-4 py-3 outline-none focus:border-blue-500 min-h-[100px] resize-y"
                             />
                           </div>
                         </div>
@@ -1397,7 +1477,7 @@ export default function App() {
                       <span>Generate Outline</span>
                       {!isGenerating && <ChevronRight className="w-6 h-6" />}
                     </button>
-                    {!isUserKeyReady && (
+                    {!isUserKeyReady && userRole !== "admin" && (
                       <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl flex items-center gap-3 max-w-md animate-in slide-in-from-right-4">
                         <ShieldAlert className="w-5 h-5 text-amber-600 flex-shrink-0" />
                         <p className="text-xs text-amber-700 dark:text-amber-400 font-medium">
@@ -1427,17 +1507,24 @@ export default function App() {
                       onChange={(e) => setOutlineText(e.target.value)}
                       className="w-full h-[300px] bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-6 rounded-xl font-mono text-sm leading-relaxed text-slate-800 dark:text-slate-300 resize-none outline-none focus:ring-2 focus:ring-blue-500"
                     />
-                    <div className="flex gap-2 mt-4 items-center bg-blue-50 dark:bg-blue-900/10 p-3 rounded-xl border border-blue-100 dark:border-blue-800/50">
-                      <input 
-                        type="text" value={revisionInput} onChange={(e) => setRevisionInput(e.target.value)}
-                        placeholder="Revisi outline di sini..." 
-                        className="flex-1 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 outline-none w-full bg-slate-50 dark:bg-slate-950 dark:text-white"
+                    <div className="flex gap-2 mt-4 items-start bg-blue-50 dark:bg-blue-900/10 p-3 rounded-xl border border-blue-100 dark:border-blue-800/50">
+                      <textarea 
+                        value={revisionInput} onChange={(e) => setRevisionInput(e.target.value)}
+                        placeholder="Revisi outline di sini... (tekan Revisi untuk memproses)" 
+                        className="flex-1 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 outline-none w-full bg-slate-50 dark:bg-slate-950 dark:text-white resize-none min-h-[50px] max-h-[200px]"
+                        rows={1}
+                        onInput={(e) => {
+                          const target = e.target as HTMLTextAreaElement;
+                          target.style.height = 'auto';
+                          target.style.height = target.scrollHeight + 'px';
+                        }}
                       />
                       <button 
                         onClick={handleReviseOutline} disabled={isRevising || !revisionInput.trim()}
-                        className="bg-blue-600 text-white px-5 py-3 rounded-xl font-bold flex items-center gap-2"
+                        className="bg-blue-600 text-white px-5 py-3 rounded-xl font-bold flex items-center gap-2 self-end shadow-md transition-all active:scale-95"
                       >
-                        {isRevising ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} Revisi
+                        {isRevising ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} 
+                        <span className="hidden sm:inline">Revisi</span>
                       </button>
                     </div>
                   </div>
@@ -1453,45 +1540,53 @@ export default function App() {
                           </SwiperSlide>
 
               <SwiperSlide key="output">
-                <div className="flex flex-col h-[calc(100vh-160px)] animate-in fade-in">
+                <div className="flex flex-col min-h-full lg:h-[calc(100vh-160px)] animate-in fade-in pb-10 lg:pb-0">
                   <div className="mb-4">
                     <h1 className="text-2xl font-bold">Final Output Layout</h1>
-                    <p className="text-slate-500 text-sm">Pilih halaman di sebelah kiri untuk melihat prompt JSON yang dihasilkan.</p>
+                    <p className="text-slate-500 text-sm">Pilih halaman di bawah (mobile) atau di kiri (desktop) untuk melihat prompt JSON.</p>
                   </div>
                   <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0">
-                    <aside className="w-full lg:w-72 flex flex-shrink-0 flex-col gap-4 min-h-0">
-                      <div className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-2xl border flex flex-col h-full overflow-hidden">
-                        <div className="p-4 overflow-y-auto custom-scrollbar flex-1">
-                          <div className="mb-4">
-                            <div className="px-3 py-2 text-xs font-bold text-slate-400 uppercase">Lembar Siswa</div>
-                            <ul className="flex flex-col gap-1">
-                              {pageTabs.map((tab) => (
-                                <li key={tab}>
-                                  <button onClick={() => setActiveTab(tab)} className={`w-full flex justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${activeTab === tab ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
-                                    Halaman {tab}
-                                    {pageData[tab]?.data ? <CheckCircle className="w-4 h-4 text-emerald-400" /> : <div className="w-2 h-2 rounded-full bg-slate-200 dark:bg-slate-700"></div>}
-                                  </button>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                          <div>
-                            <div className="px-3 py-2 text-xs font-bold text-slate-400 uppercase">Pegangan Guru</div>
-                            <ul className="flex flex-col gap-1">
-                              {guruTabs.map((tab) => (
-                                <li key={tab}>
-                                  <button onClick={() => setActiveTab(tab)} className={`w-full flex justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${activeTab === tab ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
-                                    {tab}
-                                    {pageData[tab]?.data ? <CheckCircle className="w-4 h-4 text-emerald-400" /> : <div className="w-2 h-2 rounded-full bg-slate-200 dark:bg-slate-700"></div>}
-                                  </button>
-                                </li>
-                              ))}
-                            </ul>
+                    <aside className="w-full lg:w-72 flex flex-shrink-0 flex-col gap-4 lg:min-h-0">
+                      <div className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-2xl border flex flex-col h-fit lg:h-full overflow-hidden shadow-sm">
+                        <div className="p-4 overflow-x-auto lg:overflow-y-auto custom-scrollbar flex-1">
+                          <div className="flex lg:flex-col gap-4 lg:gap-0">
+                            <div className="flex flex-shrink-0 flex-col gap-1 pr-4 lg:pr-0 border-r lg:border-r-0 lg:border-b lg:pb-4 border-slate-100 dark:border-slate-800/50">
+                              <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Siswa</div>
+                              <ul className="flex lg:flex-col gap-2 lg:gap-1">
+                                {pageTabs.map((tab) => (
+                                  <li key={tab} className="flex-shrink-0">
+                                    <button 
+                                      onClick={() => setActiveTab(tab)} 
+                                      className={`min-w-[100px] lg:w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-xs lg:text-sm font-medium transition-all ${activeTab === tab ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20 scale-[1.02]' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                                    >
+                                      <span className="truncate">Hal {tab}</span>
+                                      {pageData[tab]?.data ? <CheckCircle className="w-3.5 h-3.5 text-emerald-400" /> : <div className="w-1.5 h-1.5 rounded-full bg-slate-200 dark:bg-slate-700"></div>}
+                                    </button>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                            <div className="flex flex-shrink-0 flex-col gap-1 pl-4 lg:pl-0 lg:pt-4">
+                              <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Guru</div>
+                              <ul className="flex lg:flex-col gap-2 lg:gap-1">
+                                {guruTabs.map((tab) => (
+                                  <li key={tab} className="flex-shrink-0">
+                                    <button 
+                                      onClick={() => setActiveTab(tab)} 
+                                      className={`min-w-[100px] lg:w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-xs lg:text-sm font-medium transition-all ${activeTab === tab ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20 scale-[1.02]' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                                    >
+                                      <span className="truncate">{tab}</span>
+                                      {pageData[tab]?.data ? <CheckCircle className="w-3.5 h-3.5 text-emerald-400" /> : <div className="w-1.5 h-1.5 rounded-full bg-slate-200 dark:bg-slate-700"></div>}
+                                    </button>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
                           </div>
                         </div>
                       </div>
                     </aside>
-                    <section className="flex-1 flex flex-col gap-4 min-h-0">
+                    <section className="flex-1 flex flex-col gap-4 min-h-[400px] lg:min-h-0 pb-10 lg:pb-0">
                       <div className="flex justify-between items-center border border-slate-200 dark:border-slate-800 rounded-2xl bg-white dark:bg-slate-900 p-3 shadow-sm">
                         <h3 className="font-bold flex items-center gap-2 px-3">
                           <Code className="w-5 h-5 text-blue-500" />
@@ -1557,22 +1652,32 @@ export default function App() {
                         {/* REVISION CHAT BAR */}
                         {pageData[activeTab]?.data && (
                           <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-white via-white/95 to-transparent dark:from-slate-900 dark:via-slate-900/95 z-30">
-                            <div className="max-w-3xl mx-auto flex gap-3 p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl shadow-blue-500/10 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all">
-                              <div className="flex-1 flex items-center px-2">
-                                <Sparkles className="w-4 h-4 text-blue-500 mr-2" />
-                                <input 
-                                  type="text"
+                            <div className="max-w-3xl mx-auto flex items-end gap-3 p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl shadow-blue-500/10 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all">
+                              <div className="flex-1 flex items-start px-2 py-1">
+                                <Sparkles className="w-4 h-4 text-blue-500 mt-1 mr-2 flex-shrink-0" />
+                                <textarea 
                                   value={revisionInput}
                                   onChange={(e) => setRevisionInput(e.target.value)}
-                                  onKeyDown={(e) => e.key === 'Enter' && handleRevisePageJSON()}
-                                  placeholder="Minta revisi... (e.g. 'tambah area tanda tangan', 'ubah tema jadi hutan')"
-                                  className="w-full bg-transparent border-none outline-none text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400"
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                      e.preventDefault();
+                                      handleRevisePageJSON();
+                                    }
+                                  }}
+                                  onInput={(e) => {
+                                    const target = e.target as HTMLTextAreaElement;
+                                    target.style.height = 'auto';
+                                    target.style.height = Math.min(target.scrollHeight, 150) + 'px';
+                                  }}
+                                  placeholder="Minta revisi... (Shift+Enter untuk baris baru)"
+                                  className="w-full bg-transparent border-none outline-none text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400 resize-none max-h-[150px] py-0.5"
+                                  rows={1}
                                 />
                               </div>
                               <button 
                                 onClick={handleRevisePageJSON}
                                 disabled={!revisionInput.trim() || pageData[activeTab]?.loading}
-                                className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 dark:disabled:bg-slate-700 text-white p-2 rounded-xl transition-all active:scale-90"
+                                className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 dark:disabled:bg-slate-700 text-white p-2.5 rounded-xl transition-all active:scale-90 flex-shrink-0"
                               >
                                 {pageData[activeTab]?.loading ? (
                                   <Loader2 className="w-5 h-5 animate-spin" />

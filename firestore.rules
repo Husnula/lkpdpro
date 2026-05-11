@@ -17,7 +17,7 @@ service cloud.firestore {
     }
 
     function isAdminEmail() {
-      return request.auth.token.email == 'jagofeed@gmail.com';
+      return request.auth.token.email == 'jagofeed@gmail.com' && request.auth.token.email_verified == true;
     }
 
     function isValidId(id) {
@@ -35,12 +35,28 @@ service cloud.firestore {
     function isAdmin() {
       return isSignedIn() 
         && request.auth.token.email_verified == true 
-        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+        && (
+          request.auth.token.email == 'jagofeed@gmail.com' ||
+          (
+            exists(/databases/$(database)/documents/users/$(request.auth.uid))
+            && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+          )
+        );
+    }
+
+    function isActive() {
+      return isSignedIn()
+        && (
+          isAdmin() ||
+          (
+            exists(/databases/$(database)/documents/users/$(request.auth.uid))
+            && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'active'
+          )
+        );
     }
 
     function isValidUser(data) {
-      let requiredFields = ['uid', 'email', 'lastLogin', 'role', 'status'];
+      let requiredFields = ['uid', 'email', 'role', 'status', 'lastLogin'];
       return data.keys().hasAll(requiredFields)
         && data.uid == request.auth.uid
         && data.email is string && data.email.size() <= 256
@@ -52,12 +68,14 @@ service cloud.firestore {
     }
 
     function isValidLKPD(data) {
-      let requiredFields = ['userId', 'title', 'step', 'createdAt', 'updatedAt'];
+      let requiredFields = ['userId', 'title', 'step', 'formData', 'outline', 'pageData', 'updatedAt'];
       return data.keys().hasAll(requiredFields)
         && data.userId == request.auth.uid
         && data.title is string && data.title.size() <= 200
         && data.step is int
-        && data.createdAt is timestamp
+        && data.formData is map
+        && data.outline is string && data.outline.size() <= 100000
+        && data.pageData is map
         && data.updatedAt == request.time;
     }
 
@@ -68,30 +86,46 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow list: if isAdmin();
-      allow get: if isOwner(userId) || isAdmin();
-      allow create: if isOwner(userId) && isValidId(userId) && isValidUser(incoming()) 
+      allow get: if (isOwner(userId) || isAdmin()) && isValidId(userId);
+      
+      allow create: if isOwner(userId) 
+        && isValidId(userId) 
+        && isValidUser(incoming())
+        && incoming().keys().size() >= 5 && incoming().keys().size() <= 7
         && (
           (isAdminEmail() && incoming().role == 'admin' && incoming().status == 'active') ||
           (!isAdminEmail() && incoming().role == 'user' && incoming().status == 'pending')
         );
-      allow update: if (isOwner(userId) && isValidId(userId) && isValidUser(incoming())
-        && incoming().diff(existing()).affectedKeys().hasOnly(['lastLogin', 'displayName', 'photoURL', 'role', 'status', 'uid', 'email'])
-        && (
-          (isAdminEmail()) || 
-          (incoming().role == existing().role && incoming().status == existing().status)
-        ))
-        || (isAdmin() && isValidId(userId) && incoming().diff(existing()).affectedKeys().hasOnly(['status']));
+        
+      allow update: if isValidId(userId) && (
+        (isOwner(userId) && isValidUser(incoming())
+          && (
+            // Action: Profile Update (Self)
+            (incoming().diff(existing()).affectedKeys().hasOnly(['lastLogin', 'displayName', 'photoURL']) && incoming().role == existing().role && incoming().status == existing().status) ||
+            // Action: Admin Bootstrap (Self)
+            (isAdminEmail() && incoming().role == 'admin' && incoming().status == 'active')
+          )
+        )
+        || (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'role']))
+      );
     }
 
     match /lkpds/{lkpdId} {
-      allow get: if isSignedIn() && existing().userId == request.auth.uid;
-      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
-      allow create: if isSignedIn() && isValidLKPD(incoming());
-      allow update: if isSignedIn() && existing().userId == request.auth.uid 
+      allow list: if isActive() && resource.data.userId == request.auth.uid;
+      allow get: if isActive() && isValidId(lkpdId) && existing().userId == request.auth.uid;
+      
+      allow create: if isActive() 
+        && isValidId(lkpdId) 
+        && isValidLKPD(incoming())
+        && incoming().createdAt == request.time
+        && incoming().keys().size() == 8;
+        
+      allow update: if isActive() && isValidId(lkpdId) && existing().userId == request.auth.uid 
         && isValidLKPD(incoming())
         && incoming().userId == existing().userId
-        && incoming().createdAt == existing().createdAt;
-      allow delete: if isSignedIn() && existing().userId == request.auth.uid;
+        && incoming().diff(existing()).affectedKeys().hasOnly(['userId', 'title', 'step', 'formData', 'outline', 'pageData', 'updatedAt']);
+        
+      allow delete: if isActive() && isValidId(lkpdId) && existing().userId == request.auth.uid;
     }
   }
 }
