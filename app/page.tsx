@@ -44,8 +44,8 @@ Jika membuat JSON untuk Halaman 1, struktur layout harus selalu diawali dengan a
 
 2. HALAMAN 2 DST: KONTEN LEMBAR SISWA (LATIHAN/MATERI)
 Ini adalah halaman kerja murni untuk siswa.
-- Header Minimal: Gunakan area "HEADER_MINIMAL" yang berisi Judul Topik singkat. 
-- ATURAN NOMOR HALAMAN (KRITIKAL): DILARANG memunculkan nomor halaman di area Header (atas). Nomor halaman WAJIB diletakkan di area Footer (bawah) saja untuk menjaga kebersihan visual atas, kecuali ada permintaan khusus dari user.
+- Header Minimal: Gunakan area "HEADER_MINIMAL" yang berisi Judul Topik singkat murni. DILARANG KERAS memunculkan teks "Halaman [X]" di Header (atas).
+- ATURAN NOMOR HALAMAN (ANGAT KRITIKAL): Nomor halaman WAJIB diletakkan di area Footer (bawah) saja. Pastikan HEADER_MINIMAL tidak memiliki elemen nomor halaman.
 - Konten: Berisi blok materi singkat (jika ada) dan blok latihan (Exercise).
 - Zero-Placeholder: TULIS SOAL SECARA UTUH. Jangan gunakan teks seperti "tulis contoh soal di sini". Jika itu pilihan ganda, tulis opsi A, B, C, D dengan lengkap. Jika esai, tulis skenario pertanyaannya.
 - LARANGAN KERAS: DILARANG KERAS menyertakan atau membocorkan kunci jawaban di halaman ini! Jangan memberi instruksi untuk melingkari/mencentang jawaban yang benar di dalam "visual_prompt" atau "elements". Biarkan area jawaban benar-benar kosong untuk diisi siswa.
@@ -870,8 +870,10 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
           <div className="p-6 flex flex-col gap-1 border-b border-slate-200 dark:border-slate-800">
             <div className="flex justify-between items-center">
               <h1 className="font-bold text-xl text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg overflow-hidden flex-shrink-0 border border-slate-100 dark:border-slate-700 bg-blue-50 dark:bg-slate-800">
-                  <img src="/icon.png" alt="Logo" className="w-full h-full object-cover" />
+                <div className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center">
+                  <img src="/icon.png" alt="Logo" className="w-full h-full object-contain" onError={(e) => {
+                    (e.target as HTMLImageElement).src = 'https://aidukasi.net/wp-content/uploads/2023/12/logo-bulat.png';
+                  }} />
                 </div>
                 LKPD Pro
               </h1>
@@ -970,21 +972,21 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
           <div className="px-6 py-4 flex flex-col gap-2">
             <div className="flex flex-col gap-1.5 p-3 rounded-2xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100/50 dark:border-blue-800/30">
               <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center mb-1">Our Ecosystem</p>
-              <div className="flex items-center justify-center gap-2">
+              <div className="flex items-center justify-center gap-3">
                 <a 
                   href="https://pakhusnul.id" 
                   target="_blank" 
                   rel="noopener noreferrer" 
-                  className="text-[10px] font-bold text-slate-500 hover:text-blue-600 transition-colors"
+                  className="text-[10px] sm:text-xs font-bold text-slate-500 hover:text-blue-600 transition-colors"
                 >
                   pakhusnul.id
                 </a>
-                <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700"></span>
+                <div className="w-px h-3 bg-slate-200 dark:bg-slate-700"></div>
                 <a 
                   href="https://aidukasi.net" 
                   target="_blank" 
                   rel="noopener noreferrer" 
-                  className="text-[10px] font-bold text-slate-500 hover:text-blue-600 transition-colors"
+                  className="text-[10px] sm:text-xs font-bold text-slate-500 hover:text-blue-600 transition-colors"
                 >
                   aidukasi.net
                 </a>
