@@ -1,0 +1,97 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Phase 3: Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdminEmail() {
+      return request.auth.token.email == 'jagofeed@gmail.com';
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isAdmin() {
+      return isSignedIn() 
+        && request.auth.token.email_verified == true 
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isValidUser(data) {
+      let requiredFields = ['uid', 'email', 'lastLogin', 'role', 'status'];
+      return data.keys().hasAll(requiredFields)
+        && data.uid == request.auth.uid
+        && data.email is string && data.email.size() <= 256
+        && (data.role in ['user', 'admin'])
+        && (data.status in ['pending', 'active', 'suspended'])
+        && data.lastLogin == request.time
+        && (!('displayName' in data) || data.displayName == null || (data.displayName is string && data.displayName.size() <= 256))
+        && (!('photoURL' in data) || data.photoURL == null || (data.photoURL is string && data.photoURL.size() <= 1024));
+    }
+
+    function isValidLKPD(data) {
+      let requiredFields = ['userId', 'title', 'step', 'createdAt', 'updatedAt'];
+      return data.keys().hasAll(requiredFields)
+        && data.userId == request.auth.uid
+        && data.title is string && data.title.size() <= 200
+        && data.step is int
+        && data.createdAt is timestamp
+        && data.updatedAt == request.time;
+    }
+
+    // Pillar 1: Master Gate
+    match /test/connection {
+      allow get: if isSignedIn();
+    }
+
+    match /users/{userId} {
+      allow list: if isAdmin();
+      allow get: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isValidId(userId) && isValidUser(incoming()) 
+        && (
+          (isAdminEmail() && incoming().role == 'admin' && incoming().status == 'active') ||
+          (!isAdminEmail() && incoming().role == 'user' && incoming().status == 'pending')
+        );
+      allow update: if (isOwner(userId) && isValidId(userId) && isValidUser(incoming())
+        && incoming().diff(existing()).affectedKeys().hasOnly(['lastLogin', 'displayName', 'photoURL', 'role', 'status', 'uid', 'email'])
+        && (
+          (isAdminEmail()) || 
+          (incoming().role == existing().role && incoming().status == existing().status)
+        ))
+        || (isAdmin() && isValidId(userId) && incoming().diff(existing()).affectedKeys().hasOnly(['status']));
+    }
+
+    match /lkpds/{lkpdId} {
+      allow get: if isSignedIn() && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidLKPD(incoming());
+      allow update: if isSignedIn() && existing().userId == request.auth.uid 
+        && isValidLKPD(incoming())
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt;
+      allow delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+  }
+}

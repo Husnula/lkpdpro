@@ -1,0 +1,45 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "admin"] },
+        "status": { "type": "string", "enum": ["pending", "active", "suspended"] },
+        "lastLogin": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role", "status"]
+    },
+    "LKPD": {
+      "title": "LKPD Project",
+      "description": "Stored project for LKPD Generator",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "step": { "type": "integer" },
+        "formData": { "type": "object" },
+        "outline": { "type": "string" },
+        "pageData": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "step", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User collection"
+    },
+    "/lkpds/{lkpdId}": {
+      "schema": "LKPD",
+      "description": "Generated LKPDs collection"
+    }
+  }
+}
