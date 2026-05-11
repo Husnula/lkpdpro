@@ -26,7 +26,7 @@ import {
 
 import { GoogleGenAI } from "@google/genai";
 
-const SYSTEM_PROMPT = `
+  const SYSTEM_PROMPT = `
 Kamu adalah LKPD Generator Pro, spesialis perancang Lembar Kerja Peserta Didik (LKPD) visual untuk Kurikulum Merdeka. Tugasmu adalah merancang layout halaman yang padat, visual, edukatif, dan konsisten secara desain, lalu menerjemahkannya menjadi Prompt JSON Layout per halaman sesuai ukuran dan orientasi kertas yang diminta pengguna.
 
 Output JSON-mu akan dibaca oleh AI Image Generator / Layout Engine untuk menyusun elemen visual dan teks menjadi sebuah dokumen utuh yang siap cetak.
@@ -44,7 +44,8 @@ Jika membuat JSON untuk Halaman 1, struktur layout harus selalu diawali dengan a
 
 2. HALAMAN 2 DST: KONTEN LEMBAR SISWA (LATIHAN/MATERI)
 Ini adalah halaman kerja murni untuk siswa.
-- Header Minimal: Gunakan area "HEADER_MINIMAL" yang berisi Judul Topik singkat dan label "Halaman [X]".
+- Header Minimal: Gunakan area "HEADER_MINIMAL" yang berisi Judul Topik singkat. 
+- ATURAN NOMOR HALAMAN (KRITIKAL): DILARANG memunculkan nomor halaman di area Header (atas). Nomor halaman WAJIB diletakkan di area Footer (bawah) saja untuk menjaga kebersihan visual atas, kecuali ada permintaan khusus dari user.
 - Konten: Berisi blok materi singkat (jika ada) dan blok latihan (Exercise).
 - Zero-Placeholder: TULIS SOAL SECARA UTUH. Jangan gunakan teks seperti "tulis contoh soal di sini". Jika itu pilihan ganda, tulis opsi A, B, C, D dengan lengkap. Jika esai, tulis skenario pertanyaannya.
 - LARANGAN KERAS: DILARANG KERAS menyertakan atau membocorkan kunci jawaban di halaman ini! Jangan memberi instruksi untuk melingkari/mencentang jawaban yang benar di dalam "visual_prompt" atau "elements". Biarkan area jawaban benar-benar kosong untuk diisi siswa.
@@ -86,6 +87,7 @@ Agar seluruh dokumen terlihat profesional dan menyatu, kamu WAJIB menggunakan st
 1. FOOTER BRANDING: Gunakan area "FOOTER_BRANDING" di bagian paling bawah setiap halaman.
    - Elemen wajib: Nama Guru, Tahun Ajaran, dan App Branding ("LKPD Generator Pro").
    - Sertakan "page_number" dalam format teks yang konsisten (contoh: "- [Nomor Halaman] -").
+   - NOMOR HALAMAN WAJIB DI FOOTER.
 2. STYLE CONSISTENCY: Jika halaman sebelumnya menggunakan gaya box kayu untuk footer, maka halaman berikutnya HARUS menggunakan gaya yang sama. Jangan mengubah "visual_prompt" untuk area footer antar halaman kecuali ada perubahan tema materi yang sangat drastis.
 
 BAGIAN 6 — FORMAT OUTPUT JSON YANG DIMINTA
@@ -868,7 +870,10 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
           <div className="p-6 flex flex-col gap-1 border-b border-slate-200 dark:border-slate-800">
             <div className="flex justify-between items-center">
               <h1 className="font-bold text-xl text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
-                <BookOpen className="text-blue-600 dark:text-blue-500 w-6 h-6" /> LKPD Pro
+                <div className="w-7 h-7 rounded-lg overflow-hidden flex-shrink-0 border border-slate-100 dark:border-slate-700 bg-blue-50 dark:bg-slate-800">
+                  <img src="/icon.png" alt="Logo" className="w-full h-full object-cover" />
+                </div>
+                LKPD Pro
               </h1>
               <button className="md:hidden text-slate-500" onClick={() => setShowMobileMenu(false)}>
                 <ArrowLeft className="w-5 h-5"/>
@@ -965,28 +970,23 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
           <div className="px-6 py-4 flex flex-col gap-2">
             <div className="flex flex-col gap-1.5 p-3 rounded-2xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100/50 dark:border-blue-800/30">
               <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center mb-1">Our Ecosystem</p>
-              <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-center gap-2">
                 <a 
                   href="https://pakhusnul.id" 
                   target="_blank" 
                   rel="noopener noreferrer" 
-                  className="flex items-center justify-between group"
+                  className="text-[10px] font-bold text-slate-500 hover:text-blue-600 transition-colors"
                 >
-                  <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400 group-hover:text-blue-600 transition-colors">pakhusnul.id</span>
-                  <div className="w-5 h-5 rounded-lg bg-white dark:bg-slate-800 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity border border-slate-100 dark:border-slate-700">
-                    <ChevronRight className="w-3 h-3 text-blue-500" />
-                  </div>
+                  pakhusnul.id
                 </a>
+                <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700"></span>
                 <a 
                   href="https://aidukasi.net" 
                   target="_blank" 
                   rel="noopener noreferrer" 
-                  className="flex items-center justify-between group"
+                  className="text-[10px] font-bold text-slate-500 hover:text-blue-600 transition-colors"
                 >
-                  <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400 group-hover:text-blue-600 transition-colors">aidukasi.net</span>
-                  <div className="w-5 h-5 rounded-lg bg-white dark:bg-slate-800 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity border border-slate-100 dark:border-slate-700">
-                    <ChevronRight className="w-3 h-3 text-blue-500" />
-                  </div>
+                  aidukasi.net
                 </a>
               </div>
             </div>

@@ -25,7 +25,7 @@ export default function RootLayout({
     <html lang="id">
       <head>
         <meta name="theme-color" content="#2563eb" />
-        <link rel="apple-touch-icon" href="https://aidukasi.net/wp-content/uploads/2023/12/logo-bulat.png" />
+        <link rel="apple-touch-icon" href="/icon.png" />
       </head>
       <body className="antialiased font-sans bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
         <AuthProvider>

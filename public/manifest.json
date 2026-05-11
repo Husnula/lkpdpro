@@ -4,16 +4,16 @@
   "description": "AI-Powered Worksheet Generator for Educators",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f172a",
+  "background_color": "#ffffff",
   "theme_color": "#2563eb",
   "icons": [
     {
-      "src": "https://pakhusnul.id/favicon.ico",
+      "src": "/favicon.ico",
       "sizes": "64x64",
       "type": "image/x-icon"
     },
     {
-      "src": "https://aidukasi.net/wp-content/uploads/2023/12/logo-bulat.png",
+      "src": "/icon.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
