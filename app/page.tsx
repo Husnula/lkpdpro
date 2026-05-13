@@ -108,6 +108,52 @@ Skema utama:
 }
 `;
 
+const buildFooterTemplate = (
+  pageId: string, 
+  namaGuru: string, 
+  tahunAjaran: string
+) => {
+  const hasGuru = namaGuru && namaGuru.trim() !== '';
+  const hasTahun = tahunAjaran && tahunAjaran.trim() !== '';
+  const hasBranding = hasGuru || hasTahun;
+
+  return {
+    area: "FOOTER_BRANDING",
+    visual_prompt: "Thin dotted horizontal line separator. Single row below it: left side shows branding info if available, page number centered in bold 9pt, 'LKPD Generator Pro' right-aligned in 8pt sans-serif. No other elements.",
+    elements: [
+      {
+        type: "divider",
+        style: "thin_dotted_line"
+      },
+      {
+        type: "layout_row",
+        columns: [
+          {
+            content: hasBranding
+              ? [
+                  hasGuru ? `Guru: ${namaGuru}` : null,
+                  hasTahun ? `TA: ${tahunAjaran}` : null
+                ].filter(Boolean).join(" | ")
+              : null,
+            alignment: "left",
+            style: "normal_7pt"
+          },
+          {
+            content: `- ${pageId} -`,
+            alignment: "center",
+            style: "bold_9pt"
+          },
+          {
+            content: "LKPD Generator Pro",
+            alignment: "right",
+            style: "normal_8pt"
+          }
+        ]
+      }
+    ]
+  };
+};
+
 // Helper: Call Gemini API with Hybrid BYOK & Failover
 const executeGeminiRequest = async (apiKey: string, userPrompt: string, systemInstruction: string, isJson: boolean) => {
   try {
@@ -692,6 +738,13 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
         pageContext = "SANGAT PENTING: Karena ini adalah HALAMAN SISWA, DILARANG KERAS mencantumkan jawaban yang benar di dalam JSON (seperti tanda silang, lingkaran, atau teks penanda pada jawaban). Terapkan aturan BAGIAN 1 - HALAMAN 2 DST.";
       }
 
+      const footerTemplate = buildFooterTemplate(
+        pageId,
+        formData.namaGuru,
+        formData.tahunAjaran
+      );
+      const footerTemplateStr = JSON.stringify(footerTemplate, null, 2);
+
       const userPrompt = `
         Berdasarkan Outline berikut:
         ${outlineText}
@@ -727,6 +780,15 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
           "meta": { "page_number": "${pageId}", "subject": "${formData.mapel}", "paper_size": "${formData.ukuranKertas}", "orientation": "${formData.orientasi}" },
           "layout_structure": [ ... ]
         }
+
+        FOOTER TEMPLATE — INSTRUKSI KERAS:
+        Salin objek JSON berikut PERSIS SAMA ke dalam output JSON 
+        kamu sebagai area FOOTER_BRANDING. Dilarang mengubah 
+        visual_prompt, nama field, urutan element, atau struktur 
+        apapun. Satu-satunya nilai yang boleh berbeda adalah 
+        content nomor halaman jika pageId berbeda.
+
+        ${footerTemplateStr}
       `;
       
       const resultText = await callGeminiAPI(userPrompt, SYSTEM_PROMPT, true, userRole, userApiKeys);
