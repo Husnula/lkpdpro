@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Aidukasi - Master AI Education | Learn Artificial Intelligence</title>
+    <meta name="description" content="Aidukasi adalah platform edukasi AI untuk guru Indonesia. Pelajari cara menggunakan AI dalam mengajar, membuat soal, dan menyusun modul ajar." />
+    <meta name="author" content="Aidukasi" />
+    <link rel="canonical" href="https://aidukasi.net/" />
+    <meta property="og:title" content="Aidukasi - Master AI Education" />
+    <meta property="og:description" content="Platform edukasi AI untuk guru Indonesia. Pelajari cara menggunakan AI dalam mengajar, membuat soal, dan menyusun modul ajar." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://aidukasi.net/" />
+    <meta property="og:site_name" content="Aidukasi" />
+    <meta property="og:image" content="https://aidukasi.net/og-image.png" />
+    <meta property="og:image:secure_url" content="https://aidukasi.net/og-image.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Aidukasi - Platform AI & Edukasi untuk Guru Indonesia" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Aidukasi - Master AI Education" />
+    <meta name="twitter:description" content="Platform edukasi AI untuk guru Indonesia." />
+    <meta name="twitter:image" content="https://aidukasi.net/og-image.png" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <script type="module" crossorigin src="/assets/index-Qqzk4IR5.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-pFNHCw0q.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"1118b691768345ea951614d037c1653e","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>

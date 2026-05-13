@@ -1445,7 +1445,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
                           <Palette className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                           <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Tema Visual</h2>
                         </div>
-                        <div className="grid grid-cols-2 gap-3 mb-5">
+                        <div className="grid grid-cols-2 gap-3 mb-4">
                           {[
                             { id: 'PLAYFUL_COLOR', name: 'Playful', icon: ToyBrick, colorClass: 'from-pink-100 to-orange-100 text-pink-500' },
                             { id: 'CLEAN_MONO', name: 'Clean', icon: LayoutDashboard, colorClass: 'bg-white text-slate-600' },
@@ -1462,6 +1462,25 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
                               </div>
                             </label>
                           ))}
+                        </div>
+
+                        <div className="flex flex-col gap-1.5 mb-2 group">
+                          <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1">Atau Tema Kustom</label>
+                          <div className="relative">
+                            <input 
+                              type="text" 
+                              name="visualCustom" 
+                              value={['PLAYFUL_COLOR', 'CLEAN_MONO', 'NATURE_GREEN', 'OCEAN_BLUE'].includes(formData.visual) ? '' : formData.visual} 
+                              onChange={(e) => setFormData({...formData, visual: e.target.value})}
+                              placeholder="Misal: Vintage, Cyberpunk, Watercolor..."
+                              className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 rounded-xl px-4 py-2.5 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all text-sm"
+                            />
+                            {formData.visual && !['PLAYFUL_COLOR', 'CLEAN_MONO', 'NATURE_GREEN', 'OCEAN_BLUE'].includes(formData.visual) && (
+                              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                <Sparkles className="w-4 h-4 text-amber-500 animate-pulse" />
+                              </div>
+                            )}
+                          </div>
                         </div>
 
                         <div className="flex flex-col gap-4 border-t border-slate-100 dark:border-slate-800 pt-4">
