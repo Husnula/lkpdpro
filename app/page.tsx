@@ -332,7 +332,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
         step: step,
         formData: formData,
         outline: outlineText,
-        pageData: pageData,
+        pageData: JSON.stringify(pageData),
         updatedAt: serverTimestamp()
       };
 
@@ -358,7 +358,21 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
     setProjectId(project.id);
     setFormData({ ...defaultFormData, ...(project.formData || {}) });
     setOutlineText(project.outline || "");
-    setPageData(project.pageData || {});
+    
+    // Handle serialized pageData to avoid nested array errors in Firestore
+    let pData = {};
+    if (typeof project.pageData === 'string') {
+      try {
+        pData = JSON.parse(project.pageData);
+      } catch (e) {
+        console.error("Failed to parse pageData", e);
+        pData = {};
+      }
+    } else {
+      pData = project.pageData || {};
+    }
+    setPageData(pData);
+    
     setStep(project.step || 1);
     setView("generator");
     goToStep(project.step || 1);
@@ -633,12 +647,17 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
   };
 
   const extractJSON = (text: string) => {
+    if (!text) throw new Error("Respons AI kosong.");
+    
+    // Remove potential hidden characters or BOM
+    const cleanText = text.trim().replace(/^[\u200B\u200C\u200D\u200E\u200F\uFEFF]/, "");
+    
     try {
       // Try normal parse
-      return JSON.parse(text);
+      return JSON.parse(cleanText);
     } catch (e) {
       // Try to find JSON block in markdown
-      const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || text.match(/```\s*([\s\S]*?)\s*```/);
+      const jsonMatch = cleanText.match(/```json\s*([\s\S]*?)\s*```/) || cleanText.match(/```\s*([\s\S]*?)\s*```/);
       if (jsonMatch && jsonMatch[1]) {
         try {
           return JSON.parse(jsonMatch[1].trim());
@@ -648,11 +667,12 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
       }
       
       // Last resort: try to find the first '{' and last '}'
-      const firstBrace = text.indexOf('{');
-      const lastBrace = text.lastIndexOf('}');
+      const firstBrace = cleanText.indexOf('{');
+      const lastBrace = cleanText.lastIndexOf('}');
       if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
         try {
-          return JSON.parse(text.substring(firstBrace, lastBrace + 1));
+          const possibleJson = cleanText.substring(firstBrace, lastBrace + 1);
+          return JSON.parse(possibleJson);
         } catch (e3) {
           console.error("Failed to parse brace-extracted text", e3);
         }
