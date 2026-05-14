@@ -14,6 +14,7 @@ import {
 import { useAuth } from "@/components/AuthGuard";
 import { 
   CheckCircle, 
+  XCircle,
   Users, 
   Clock, 
   ShieldAlert, 
@@ -85,6 +86,19 @@ export default function AdminDashboard() {
     try {
       await updateDoc(doc(db, "users", userId), {
         status: "active"
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${userId}`);
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const declineUser = async (userId: string) => {
+    setProcessingId(userId);
+    try {
+      await updateDoc(doc(db, "users", userId), {
+        status: "rejected"
       });
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `users/${userId}`);
@@ -201,18 +215,32 @@ export default function AdminDashboard() {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <button
-                          onClick={() => approveUser(u.uid)}
-                          disabled={processingId === u.uid}
-                          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 dark:disabled:bg-slate-800 text-white text-sm font-bold rounded-xl shadow-sm hover:shadow-blue-500/30 transition-all"
-                        >
-                          {processingId === u.uid ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <CheckCircle className="w-4 h-4" />
-                          )}
-                          Approve
-                        </button>
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => declineUser(u.uid)}
+                            disabled={processingId === u.uid}
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-900 border border-red-200 dark:border-red-900/30 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 text-sm font-bold rounded-xl transition-all"
+                          >
+                            {processingId === u.uid ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <XCircle className="w-4 h-4" />
+                            )}
+                            Decline
+                          </button>
+                          <button
+                            onClick={() => approveUser(u.uid)}
+                            disabled={processingId === u.uid}
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 dark:disabled:bg-slate-800 text-white text-sm font-bold rounded-xl shadow-sm hover:shadow-blue-500/30 transition-all"
+                          >
+                            {processingId === u.uid ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <CheckCircle className="w-4 h-4" />
+                            )}
+                            Approve
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))

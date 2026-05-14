@@ -1730,15 +1730,24 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
                             {activeTab.startsWith('Guru') ? `${activeTab}_Kunci.json` : `Halaman_${activeTab}_Siswa.json`}
                           </span>
                         </h3>
-                        <button 
-                          onClick={() => pageData[activeTab]?.data && copyToClipboard(JSON.stringify(pageData[activeTab].data, null, 2))}
-                          className={`flex items-center justify-center gap-2 px-3 sm:px-5 py-2.5 border rounded-xl transition-all font-bold text-xs sm:text-sm ${
-                            copied 
-                              ? 'bg-emerald-500 border-emerald-600 text-white shadow-lg' 
-                              : 'bg-blue-600 border-blue-700 text-white hover:bg-blue-700 shadow-md shadow-blue-500/20 active:scale-95'
-                          }`}
-                          title="Salin JSON"
-                        >
+                        <div className="flex items-center gap-2">
+                          <button 
+                            onClick={() => handleGenerateSinglePage(activeTab)}
+                            disabled={pageData[activeTab]?.loading}
+                            className="p-2.5 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl transition-all active:scale-95 disabled:opacity-50"
+                            title="Regenerate Halaman Ini"
+                          >
+                            <RefreshCw className={`w-4 h-4 ${pageData[activeTab]?.loading ? 'animate-spin' : ''}`} />
+                          </button>
+                          <button 
+                            onClick={() => pageData[activeTab]?.data && copyToClipboard(JSON.stringify(pageData[activeTab].data, null, 2))}
+                            className={`flex items-center justify-center gap-2 px-3 sm:px-5 py-2.5 border rounded-xl transition-all font-bold text-xs sm:text-sm ${
+                              copied 
+                                ? 'bg-emerald-500 border-emerald-600 text-white shadow-lg' 
+                                : 'bg-blue-600 border-blue-700 text-white hover:bg-blue-700 shadow-md shadow-blue-500/20 active:scale-95'
+                            }`}
+                            title="Salin JSON"
+                          >
                           {copied ? (
                             <>
                               <CheckCircle className="w-5 h-5 sm:w-4 sm:h-4" /> 
@@ -1752,7 +1761,8 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
                           )}
                         </button>
                       </div>
-                      <div className="flex-1 bg-white dark:bg-[#0D1117] border border-slate-200 dark:border-slate-800 rounded-2xl relative overflow-hidden flex flex-col shadow-inner">
+                    </div>
+                    <div className="flex-1 bg-white dark:bg-[#0D1117] border border-slate-200 dark:border-slate-800 rounded-2xl relative overflow-hidden flex flex-col shadow-inner">
                         {!pageData[activeTab]?.data && !pageData[activeTab]?.loading && (
                           <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-white dark:bg-slate-900 z-10 transition-all">
                             <div className="w-20 h-20 bg-blue-50 dark:bg-blue-900/20 rounded-3xl flex items-center justify-center text-blue-300 dark:text-blue-500 group">
@@ -1776,9 +1786,18 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
                               <Loader2 className="w-12 h-12 animate-spin text-blue-600" />
                               <div className="absolute inset-0 blur-lg bg-blue-400/20 animate-pulse rounded-full"></div>
                             </div>
-                            <div className="text-center">
-                              <span className="text-sm font-bold text-blue-600 block mb-1">Menganalisis Kurikulum...</span>
-                              <span className="text-xs text-slate-400">Sedang menyusun layout {activeTab}</span>
+                            <div className="text-center flex flex-col items-center gap-4">
+                              <div>
+                                <span className="text-sm font-bold text-blue-600 block mb-1">Menganalisis Kurikulum...</span>
+                                <span className="text-xs text-slate-400">Sedang menyusun layout {activeTab}</span>
+                              </div>
+                              
+                              <button 
+                                onClick={() => handleGenerateSinglePage(activeTab)}
+                                className="flex items-center gap-2 px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-[10px] font-bold text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+                              >
+                                <RefreshCw className="w-3 h-3" /> Hubungkan Ulang (Regenerate)
+                              </button>
                             </div>
                           </div>
                         )}
