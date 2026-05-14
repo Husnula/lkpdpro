@@ -24,7 +24,7 @@ import {
 } from 'firebase/firestore';
 
 
-import { GoogleGenAI } from "@google/genai";
+import { callGeminiWithFallback } from '@/lib/gemini';
 
   const SYSTEM_PROMPT = `
 Kamu adalah LKPD Generator Pro, spesialis perancang Lembar Kerja Peserta Didik (LKPD) visual untuk Kurikulum Merdeka. Tugasmu adalah merancang layout halaman yang padat, visual, edukatif, dan konsisten secara desain, lalu menerjemahkannya menjadi Prompt JSON Layout per halaman sesuai ukuran dan orientasi kertas yang diminta pengguna.
@@ -154,25 +154,15 @@ const buildFooterTemplate = (
   };
 };
 
-// Helper: Call Gemini API with Hybrid BYOK & Failover
-const executeGeminiRequest = async (apiKey: string, userPrompt: string, systemInstruction: string, isJson: boolean) => {
-  try {
-    const ai = new GoogleGenAI({ apiKey });
-    // Note: Using gemini-3-flash-preview as recommended by the gemini-api skill rules
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: userPrompt,
-      config: {
-        systemInstruction,
-        responseMimeType: isJson ? "application/json" : "text/plain",
-      },
-    });
-    
-    return response.text;
-  } catch (error: any) {
-    console.error("Internal Gemini Request Error:", error);
-    throw error;
+const formatGeminiError = (error: any): string => {
+  const msg = error?.message?.toLowerCase() || "";
+  if (msg.includes("429") || msg.includes("quota") || msg.includes("resource_exhausted")) {
+    return "Sistem sedang memproses terlalu banyak permintaan (Kuota habis). Silakan tunggu sekitar 1 menit dan coba lagi.";
   }
+  if (msg.includes("500") || msg.includes("503") || msg.includes("overloaded") || msg.includes("api key") || msg.includes("deadline")) {
+    return "Terjadi masalah pada server AI atau koneksi. Silakan coba beberapa saat lagi.";
+  }
+  return "Terjadi kesalahan saat menghubungi server. Silakan coba beberapa saat lagi.";
 };
 
 const callGeminiAPI = async (
@@ -182,37 +172,40 @@ const callGeminiAPI = async (
   role: string = "user",
   userKeys: string[] = []
 ) => {
-  // 1. Admin Rule: Use environment variable
+  // 1. Determine Keys to use
+  let keysToTry: string[] = [];
+  
   if (role === "admin") {
     const adminKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
     if (!adminKey) throw new Error("Admin API Key (NEXT_PUBLIC_GEMINI_API_KEY) tidak ditemukan di environment.");
-    return executeGeminiRequest(adminKey, userPrompt, systemInstruction, isJson);
-  }
-
-  // 2. User Rule: Tiered Failover (BYOK)
-  const validUserKeys = userKeys.filter(k => k && k.trim() !== "");
-  if (validUserKeys.length === 0) {
-    throw new Error("API Key tidak ditemukan. Silakan masukkan API Key di menu 'API Settings'.");
-  }
-
-  let lastError = null;
-  for (let i = 0; i < validUserKeys.length; i++) {
-    try {
-      return await executeGeminiRequest(validUserKeys[i], userPrompt, systemInstruction, isJson);
-    } catch (error: any) {
-      lastError = error;
-      const errorMsg = error?.message?.toLowerCase() || "";
-      const isRateLimited = errorMsg.includes("429") || errorMsg.includes("quota exceeded");
-      const isOverloaded = errorMsg.includes("503") || errorMsg.includes("500") || errorMsg.includes("overloaded");
-      
-      if ((isRateLimited || isOverloaded) && i < validUserKeys.length - 1) {
-        console.warn(`API Key ${i + 1} mengalami limit. Mencoba Key ${i + 2}...`);
-        continue; 
-      }
-      throw error; 
+    keysToTry = [adminKey];
+  } else {
+    // User Rule: BYOK
+    const validUserKeys = userKeys.filter(k => k && k.trim() !== "");
+    if (validUserKeys.length === 0) {
+      throw new Error("API Key tidak ditemukan. Silakan masukkan API Key di menu 'API Settings'.");
     }
+    keysToTry = validUserKeys;
   }
-  throw lastError;
+
+  // 2. Call the failover engine
+  try {
+    const response = await callGeminiWithFallback(
+      userPrompt, 
+      keysToTry, 
+      systemInstruction, 
+      isJson
+    );
+    
+    // We can log the model used for debugging if needed
+    console.log(`[Gemini] Success using ${response.modelUsed} (Key Index: ${response.keyUsedIndex})`);
+    
+    return response.text;
+  } catch (error: any) {
+    // If it's already a formatted error from callGeminiWithFallback, re-throw
+    // otherwise wrap in formatGeminiError
+    throw new Error(formatGeminiError(error));
+  }
 };
 
 const JENJANG_MAP: Record<string, any> = {
@@ -489,9 +482,9 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
       if (result) {
         setFormData((prev: any) => ({ ...prev, materi: result?.replace(/["*]/g, '').trim() }));
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Gagal mendapat saran materi", err);
-      setErrorMsg(err instanceof Error ? err.message : "Gagal mendapat saran materi");
+      setErrorMsg(err?.message || "Gagal mendapat saran materi");
     } finally {
       setIsSuggestingMateri(false);
     }
@@ -505,9 +498,9 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
       if (result) {
         setFormData((prev: any) => ({ ...prev, pesanKhusus: result?.replace(/["*]/g, '').trim() }));
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Gagal mendapat saran visual", err);
-      setErrorMsg(err instanceof Error ? err.message : "Gagal mendapat saran visual");
+      setErrorMsg(err?.message || "Gagal mendapat saran visual");
     } finally {
       setIsSuggestingVisual(false);
     }
@@ -548,9 +541,9 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
       if (result) {
         setFormData((prev: any) => ({ ...prev, footerText: result?.replace(/["*]/g, '').trim() }));
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Gagal mendapat saran footer", err);
-      setErrorMsg(err instanceof Error ? err.message : "Gagal mendapat saran footer");
+      setErrorMsg(err?.message || "Gagal mendapat saran footer");
     } finally {
       setIsSuggestingFooter(false);
     }
@@ -625,8 +618,8 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
         setOutlineText(result.trim());
         setRevisionInput("");
       }
-    } catch (err) {
-      setErrorMsg("Gagal merevisi outline.");
+    } catch (err: any) {
+      setErrorMsg(err?.message || "Gagal merevisi outline.");
       console.error(err);
     } finally {
       setIsRevising(false);
@@ -714,8 +707,8 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
         }));
         setRevisionInput(""); // Clear input on success
       }
-    } catch (err) {
-      setErrorMsg(`Gagal merevisi JSON: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } catch (err: any) {
+      setErrorMsg(err?.message || "Gagal merevisi JSON.");
       setPageData((prev: any) => ({ ...prev, [activeTab]: { ...prev[activeTab], loading: false } }));
     }
   };
@@ -799,8 +792,8 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
         [pageId]: { loading: false, data: parsedData } 
       }));
       
-    } catch (err) {
-      setErrorMsg(`Gagal menghasilkan JSON untuk Halaman ${pageId}: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } catch (err: any) {
+      setErrorMsg(err?.message || "Terjadi kesalahan saat menyusun halaman.");
       setPageData((prev: any) => ({ ...prev, [pageId]: { ...prev[pageId], loading: false } }));
       console.error(err);
     }
