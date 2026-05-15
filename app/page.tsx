@@ -1,7 +1,7 @@
 "use client";
 
 // LKPD Generator Pro - Main Page
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import type { Swiper as SwiperType } from 'swiper';
 import 'swiper/css';
@@ -28,6 +28,11 @@ import { callGeminiWithFallback } from '@/lib/gemini';
 
   const SYSTEM_PROMPT = `
 Kamu adalah LKPD Generator Pro, spesialis perancang Lembar Kerja Peserta Didik (LKPD) visual untuk Kurikulum Merdeka. Tugasmu adalah merancang layout halaman yang padat, visual, edukatif, dan konsisten secara desain, lalu menerjemahkannya menjadi Prompt JSON Layout per halaman sesuai ukuran dan orientasi kertas yang diminta pengguna.
+
+Jika pengguna menyertakan "KONTEKS PROYEK SEBELUMNYA" (Outline Proyek Sebelumnya), kamu WAJIB memastikan:
+1. Tidak ada duplikasi materi yang identik antara proyek lama dan proyek baru ini.
+2. Gaya bahasa, maskot (jika ada), dan tingkat kesulitan tetap konsisten.
+3. Alur pembelajaran berkesinambungan (melanjutkan sub-topik berikutnya).
 
 Output JSON-mu akan dibaca oleh AI Image Generator / Layout Engine untuk menyusun elemen visual dan teks menjadi sebuah dokumen utuh yang siap cetak.
 
@@ -286,10 +291,37 @@ export default function App() {
     bilingual: false,
     pesanKhusus: '',
     ukuranKertas: 'A4',
-    orientasi: 'Portrait'
+    orientasi: 'Portrait',
+    referensiProyek: '',
   };
 
   const [formData, setFormData] = useState(defaultFormData);
+
+  // --- Start: Project Health/Memory Logic ---
+  const projectUsage = useMemo(() => {
+    try {
+      const dataToMeasure = {
+        formData,
+        outline: outlineText,
+        pageData: JSON.stringify(pageData)
+      };
+      const bytes = JSON.stringify(dataToMeasure).length;
+      const limit = 1000000; // 1MB limit
+      const percentage = Math.min((bytes / limit) * 100, 100);
+      
+      return {
+        bytes,
+        percentage,
+        isWarning: percentage > 60,
+        isCritical: percentage > 85,
+        kb: (bytes / 1024).toFixed(1)
+      };
+    } catch (e) {
+      return { bytes: 0, percentage: 0, isWarning: false, isCritical: false, kb: "0" };
+    }
+  }, [formData, outlineText, pageData]);
+  // --- End: Project Health/Memory Logic ---
+
   const [isMounted, setIsMounted] = useState(false);
   const [userRole, setUserRole] = useState<string>("user");
   const [userStatus, setUserStatus] = useState<string>("loading");
@@ -325,6 +357,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
   const handleSaveProject = async () => {
     if (!user) return;
     setIsSaving(true);
+    setErrorMsg(null);
     try {
       const projectData = {
         userId: user.uid,
@@ -336,6 +369,12 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
         updatedAt: serverTimestamp()
       };
 
+      // Check for size limit (roughly 1MB limit for Firestore)
+      const estimatedSize = JSON.stringify(projectData).length;
+      if (estimatedSize > 950000) { // ~950KB buffer
+        throw new Error("Penyimpanan Gagal: Project ini terlalu besar (terlalu banyak detail halaman). Silakan bagi menjadi dua project berbeda agar tetap bisa tersimpan.");
+      }
+
       if (projectId) {
         await updateDoc(doc(db, "lkpds", projectId), projectData);
       } else {
@@ -346,9 +385,25 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
         const docRef = await addDoc(collection(db, "lkpds"), newProject);
         setProjectId(docRef.id);
       }
+      
+      // Feedback visual sukses
+      const btn = document.querySelector('[data-save-btn]');
+      const originalHtml = btn?.innerHTML;
+      if (btn) {
+        btn.innerHTML = '<span class="flex items-center gap-2 font-bold"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Berhasil</span>';
+        setTimeout(() => {
+          if (btn) btn.innerHTML = originalHtml || "";
+        }, 2000);
+      }
+      
       fetchProjects();
-    } catch (e) {
-      handleFirestoreError(e, projectId ? OperationType.UPDATE : OperationType.CREATE, `lkpds/${projectId || 'new'}`);
+    } catch (err: any) {
+      console.error("Gagal menyimpan project", err);
+      if (err?.message?.includes("too large") || err?.message?.includes("limit exceeded")) {
+        setErrorMsg("Batas Kapasitas: Project terlalu besar untuk disimpan dalam satu file. Mohon kurangi jumlah halaman.");
+      } else {
+        setErrorMsg(err?.message || "Gagal menyimpan ke server. Hubungi admin jika masalah berlanjut.");
+      }
     } finally {
       setIsSaving(false);
     }
@@ -568,6 +623,14 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
     setIsGenerating(true);
     setErrorMsg("");
     try {
+      let contextPrev = "";
+      if (formData.referensiProyek) {
+        const refProject = projects.find(p => p.id === formData.referensiProyek);
+        if (refProject && refProject.outline) {
+          contextPrev = `\nKONTEKS PROYEK SEBELUMNYA (Outline Proyek Lama):\n${refProject.outline}\n--- Gunakan ini sebagai referensi agar materi berkesinambungan dan tidak duplikat. ---`;
+        }
+      }
+
       const userPrompt = `
         Berdasarkan parameter berikut, buatkan Rencana Konten (Outline) untuk LKPD.
         PARAMETER:
@@ -585,6 +648,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
         - Ukuran Kertas: ${formData.ukuranKertas}
         - Orientasi: ${formData.orientasi}
         - Instruksi Khusus: ${formData.pesanKhusus ? formData.pesanKhusus : 'Tidak ada'}
+        ${contextPrev}
 
         FORMAT OUTPUT YANG DIMINTA (Contoh untuk 2 siswa + 1 guru):
         OUTLINE LKPD: [Mapel] — [Materi] | Kelas [X] | Mode: [Y]
@@ -1142,14 +1206,44 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
             
             <div className="flex items-center gap-2">
               {view === "generator" && (
-                <button 
-                  onClick={handleSaveProject}
-                  disabled={isSaving}
-                  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold shadow-md shadow-emerald-600/20 transition-all active:scale-95 disabled:opacity-50"
-                >
-                  {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                  {projectId ? 'Update' : 'Simpan'}
-                </button>
+                <>
+                  {/* Health/Memory Indicator Bar */}
+                  <div className="hidden sm:flex flex-col items-end gap-1 mr-4">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[10px] font-bold uppercase tracking-wider ${
+                        projectUsage.isCritical ? 'text-red-500 animate-pulse' : 
+                        projectUsage.isWarning ? 'text-amber-500' : 'text-slate-400'
+                      }`}>
+                        {projectUsage.isCritical ? 'Kapasitas Kritis' : projectUsage.isWarning ? 'Kapasitas Terisi' : 'Kapasitas Proyek'}
+                      </span>
+                      <span className="text-[10px] font-mono text-slate-500">{projectUsage.kb} KB / 1MB</span>
+                    </div>
+                    <div className="w-32 h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden border border-slate-300/50 dark:border-slate-700/50">
+                      <div 
+                        className={`h-full transition-all duration-500 rounded-full ${
+                          projectUsage.isCritical ? 'bg-red-500' : 
+                          projectUsage.isWarning ? 'bg-amber-500' : 'bg-emerald-500'
+                        }`}
+                        style={{ width: `${projectUsage.percentage}%` }}
+                      />
+                    </div>
+                    {projectUsage.isCritical && (
+                      <span className="text-[9px] text-red-500 font-medium absolute -bottom-4 right-0 whitespace-nowrap">
+                        Peringatan: Proyek hampir penuh!
+                      </span>
+                    )}
+                  </div>
+  
+                  <button 
+                    onClick={handleSaveProject}
+                    disabled={isSaving}
+                    data-save-btn
+                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold shadow-md shadow-emerald-600/20 transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    {projectId ? 'Update' : 'Simpan'}
+                  </button>
+                </>
               )}
               <button 
                 onClick={() => setIsDarkMode(!isDarkMode)}
@@ -1283,9 +1377,25 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
                             <span className="text-[10px] font-bold uppercase px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-md">
                               {p.formData?.jenjang || 'General'}
                             </span>
-                            <span className="text-[10px] font-bold uppercase px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-md">
-                              {p.formData?.kelas || 'Lv'}
-                            </span>
+                          </div>
+                          
+                          {/* Card Memory Indicator */}
+                          <div className="flex flex-col gap-1 mb-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">Penyimpanan</span>
+                              <span className="text-[9px] font-mono text-slate-400">
+                                {(((JSON.stringify(p).length) / 1024)).toFixed(1)} KB
+                              </span>
+                            </div>
+                            <div className="w-full h-1 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                              <div 
+                                className={`h-full transition-all duration-500 ${
+                                  (JSON.stringify(p).length / 1000000) > 0.85 ? 'bg-red-500' : 
+                                  (JSON.stringify(p).length / 1000000) > 0.6 ? 'bg-amber-500' : 'bg-emerald-500'
+                                }`}
+                                style={{ width: `${Math.min((JSON.stringify(p).length / 1000000) * 100, 100)}%` }}
+                              />
+                            </div>
                           </div>
                         </div>
                         <div className="px-5 py-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
@@ -1341,6 +1451,25 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
                         <div className="flex items-center gap-2 mb-5 pb-3 border-b border-slate-100 dark:border-slate-800">
                           <BookOpen className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                           <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Kebutuhan Akademik</h2>
+                        </div>
+                        
+                        <div className="flex flex-col gap-1.5 mb-4">
+                          <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                            <FileSymlink className="w-4 h-4 text-emerald-500" />
+                            Kontinuitas Proyek (Opsional)
+                          </label>
+                          <select 
+                            name="referensiProyek" value={formData.referensiProyek} onChange={handleChange}
+                            className="w-full bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/50 text-slate-800 dark:text-slate-100 rounded-xl px-4 py-2.5 outline-none text-sm"
+                          >
+                            <option value="">-- Buat Proyek Mandiri (Tanpa Referensi) --</option>
+                            {projects.filter(p => p.id !== projectId).map(p => (
+                              <option key={p.id} value={p.id}>Lanjutkan dari: {p.title || 'Untitled'}</option>
+                            ))}
+                          </select>
+                          <p className="text-[10px] text-slate-500 px-1 italic">
+                            *Pilih proyek lama jika ingin materi proyek baru ini saling berkesinambungan.
+                          </p>
                         </div>
                         
                         <div className="flex flex-col gap-1.5 mb-4">
