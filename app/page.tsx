@@ -6,7 +6,7 @@ import { Swiper, SwiperSlide } from 'swiper/react';
 import type { Swiper as SwiperType } from 'swiper';
 import 'swiper/css';
 import { 
-  BookOpen, Settings, FileText, CheckCircle, 
+  Check, BookOpen, Settings, FileText, CheckCircle, 
   ChevronRight, Copy, Download, RefreshCw, Palette,
   ArrowLeft, Loader2, AlertCircle, Moon, Sun, Send, Code,
   User, BadgeInfo, Plus, HelpCircle, Bell, Menu, Lightbulb,
@@ -19,7 +19,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { db, handleFirestoreError, OperationType } from '@/lib/firebase';
 import { 
-  doc, getDoc, collection, query, where, getDocs, 
+  doc, getDoc, setDoc, collection, query, where, getDocs, 
   addDoc, updateDoc, deleteDoc, serverTimestamp, orderBy 
 } from 'firebase/firestore';
 
@@ -260,6 +260,7 @@ export default function App() {
   const [isRevising, setIsRevising] = useState(false);
   const [revisionInput, setRevisionInput] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   
@@ -366,6 +367,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
         formData: formData,
         outline: outlineText,
         pageData: JSON.stringify(pageData),
+        referensiProyek: formData.referensiProyek || "",
         updatedAt: serverTimestamp()
       };
 
@@ -386,15 +388,8 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
         setProjectId(docRef.id);
       }
       
-      // Feedback visual sukses
-      const btn = document.querySelector('[data-save-btn]');
-      const originalHtml = btn?.innerHTML;
-      if (btn) {
-        btn.innerHTML = '<span class="flex items-center gap-2 font-bold"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Berhasil</span>';
-        setTimeout(() => {
-          if (btn) btn.innerHTML = originalHtml || "";
-        }, 2000);
-      }
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2000);
       
       fetchProjects();
     } catch (err: any) {
@@ -478,17 +473,27 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
             setUserRole(data.role || "user");
             setUserStatus(data.status || "pending");
           } else {
-            // Handle initial login case for primary admin
-            if (user.email === "jagofeed@gmail.com") {
-              setUserRole("admin");
-              setUserStatus("active");
-            } else {
-              setUserRole("user");
-              setUserStatus("pending");
-            }
+            // Create initial user document
+            const isDefaultAdmin = user.email === "jagofeed@gmail.com";
+            const initialRole = isDefaultAdmin ? "admin" : "user";
+            const initialStatus = isDefaultAdmin ? "active" : "pending";
+            
+            const newUser = {
+              uid: user.uid,
+              email: user.email,
+              role: initialRole,
+              status: initialStatus,
+              lastLogin: serverTimestamp(),
+              displayName: user.displayName || "",
+              photoURL: user.photoURL || ""
+            };
+            
+            await setDoc(doc(db, "users", user.uid), newUser);
+            setUserRole(initialRole);
+            setUserStatus(initialStatus);
           }
         } catch (e) {
-          handleFirestoreError(e, OperationType.GET, `users/${user.uid}`);
+          console.error("Error checking/creating user profile", e);
           setUserStatus("error");
         }
       };
@@ -1237,11 +1242,20 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
                   <button 
                     onClick={handleSaveProject}
                     disabled={isSaving}
-                    data-save-btn
-                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold shadow-md shadow-emerald-600/20 transition-all active:scale-95 disabled:opacity-50"
+                    className={`flex items-center gap-2 px-4 py-2 text-white rounded-xl text-sm font-bold shadow-md transition-all active:scale-95 disabled:opacity-70 ${
+                      saveSuccess 
+                        ? 'bg-blue-600 shadow-blue-600/20' 
+                        : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20'
+                    }`}
                   >
-                    {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                    {projectId ? 'Update' : 'Simpan'}
+                    {isSaving ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : saveSuccess ? (
+                      <Check className="w-4 h-4" />
+                    ) : (
+                      <Save className="w-4 h-4" />
+                    )}
+                    {saveSuccess ? 'Berhasil' : (projectId ? 'Update' : 'Simpan')}
                   </button>
                 </>
               )}

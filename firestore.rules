@@ -71,11 +71,11 @@ service cloud.firestore {
       let requiredFields = ['userId', 'title', 'step', 'formData', 'outline', 'pageData', 'updatedAt'];
       return data.keys().hasAll(requiredFields)
         && data.userId == request.auth.uid
-        && data.title is string && data.title.size() <= 200
+        && data.title is string && data.title.size() <= 400
         && data.step is int
         && data.formData is map
-        && data.outline is string && data.outline.size() <= 100000
-        && data.pageData is map
+        && data.outline is string && data.outline.size() <= 500000
+        && data.pageData is string && data.pageData.size() <= 1000000
         && data.updatedAt == request.time;
     }
 
@@ -111,21 +111,21 @@ service cloud.firestore {
     }
 
     match /lkpds/{lkpdId} {
-      allow list: if isActive() && resource.data.userId == request.auth.uid;
-      allow get: if isActive() && isValidId(lkpdId) && existing().userId == request.auth.uid;
+      allow list: if (isActive() || isAdminEmail()) && resource.data.userId == request.auth.uid;
+      allow get: if (isActive() || isAdminEmail()) && isValidId(lkpdId) && existing().userId == request.auth.uid;
       
-      allow create: if isActive() 
+      allow create: if (isActive() || isAdminEmail())
         && isValidId(lkpdId) 
         && isValidLKPD(incoming())
         && incoming().createdAt == request.time
-        && incoming().keys().size() == 8;
+        && incoming().keys().size() >= 8 && incoming().keys().size() <= 10;
         
-      allow update: if isActive() && isValidId(lkpdId) && existing().userId == request.auth.uid 
+      allow update: if (isActive() || isAdminEmail()) && isValidId(lkpdId) && existing().userId == request.auth.uid 
         && isValidLKPD(incoming())
         && incoming().userId == existing().userId
-        && incoming().diff(existing()).affectedKeys().hasOnly(['userId', 'title', 'step', 'formData', 'outline', 'pageData', 'updatedAt']);
+        && incoming().diff(existing()).affectedKeys().hasOnly(['userId', 'title', 'step', 'formData', 'outline', 'pageData', 'updatedAt', 'referensiProyek']);
         
-      allow delete: if isActive() && isValidId(lkpdId) && existing().userId == request.auth.uid;
+      allow delete: if (isActive() || isAdminEmail()) && isValidId(lkpdId) && existing().userId == request.auth.uid;
     }
   }
 }

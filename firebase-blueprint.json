@@ -25,11 +25,12 @@
         "step": { "type": "integer" },
         "formData": { "type": "object" },
         "outline": { "type": "string" },
-        "pageData": { "type": "object" },
+        "pageData": { "type": "string" },
+        "referensiProyek": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["userId", "title", "step", "formData", "outline", "pageData", "createdAt", "updatedAt"]
+      "required": ["userId", "title", "step", "formData", "outline", "pageData", "updatedAt"]
     }
   },
   "firestore": {
