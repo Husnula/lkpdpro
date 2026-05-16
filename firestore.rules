@@ -91,12 +91,24 @@ service cloud.firestore {
       allow get: if isSignedIn();
     }
 
+    function isAgencyEmail() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'agency';
+    }
+
     match /users/{userId} {
       // Allow users to find their skeleton document (invited by agency) by email query
-      allow list: if isAdmin() || (isSignedIn() && resource.data.email == request.auth.token.email);
+      // Allow agencies to query their own team (by agencyId) OR search someone by email
+      allow list: if isAdmin() || (isSignedIn() && (
+        resource.data.email == request.auth.token.email ||
+        resource.data.agencyId == request.auth.uid ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && isAgencyEmail())
+      ));
       
-      // Allow read if owner, admin, or matching email (for skeleton)
-      allow read: if isOwner(userId) || isAdmin() || (isSignedIn() && resource.data.email == request.auth.token.email);
+      // Allow read if owner, admin, assigned agency, or matching email (for skeleton)
+      allow read: if isOwner(userId) || isAdmin() || (isSignedIn() && (
+        resource.data.email == request.auth.token.email ||
+        resource.data.agencyId == request.auth.uid
+      ));
       
       allow create: if (
         // Case 1: Standard Self-registration (using UID as document ID)
@@ -111,9 +123,10 @@ service cloud.firestore {
         ) ||
         // Case 2: Agency creating skeleton user (random document ID)
         (isSignedIn() 
-          && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'agency'
+          && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+          && isAgencyEmail()
           && incoming().agencyId == request.auth.uid
-          && incoming().role == 'user'
+          && (incoming().role == 'user' || incoming().role == 'agency')
           && incoming().status == 'active'
           && isValidUser(incoming())
         ) ||
@@ -126,11 +139,25 @@ service cloud.firestore {
           && (
             // Profile Update (Self)
             (incoming().diff(existing()).affectedKeys().hasOnly(['lastLogin', 'displayName', 'photoURL']) && incoming().role == existing().role && incoming().status == existing().status) ||
-            // Agency/Admin self-maintenance
+            // Agency/Admin self-maintenance or usage increment
+            (incoming().diff(existing()).affectedKeys().hasOnly(['usageCount'])) ||
             (isAdminEmail() && incoming().role == 'super-admin' && incoming().status == 'active')
           )
-        )
-        || 
+        ) ||
+        (isSignedIn() 
+          && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+          && isAgencyEmail()
+          && isValidUser(incoming())
+          && (
+            // Action: Add to team (Updating another user)
+            // Can only add if the user doesn't already have an agency
+            (!('agencyId' in existing()) || existing().agencyId == null) &&
+            incoming().agencyId == request.auth.uid &&
+            incoming().role == 'user' &&
+            incoming().status == 'active' &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['agencyId', 'role', 'status'])
+          )
+        ) || 
         // Super admin can update everything (role, license, quota, status)
         (isAdminEmail() && isValidUser(incoming()))
       );
