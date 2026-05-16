@@ -51,9 +51,10 @@ service cloud.firestore {
       return isSignedIn()
         && (
           isAdmin() ||
+          !exists(/databases/$(database)/documents/users/$(request.auth.uid)) ||
           (
-            exists(/databases/$(database)/documents/users/$(request.auth.uid))
-            && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'active'
+            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'active' ||
+            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'pending'
           )
         );
     }
@@ -99,14 +100,14 @@ service cloud.firestore {
       // Allow users to find their skeleton document (invited by agency) by email query
       // Allow agencies to query their own team (by agencyId) OR search someone by email
       allow list: if isAdmin() || (isSignedIn() && (
-        resource.data.email == request.auth.token.email ||
+        resource.data.email.lower() == request.auth.token.email.lower() ||
         resource.data.agencyId == request.auth.uid ||
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && isAgencyEmail())
       ));
       
       // Allow read if owner, admin, assigned agency, or matching email (for skeleton)
       allow read: if isOwner(userId) || isAdmin() || (isSignedIn() && (
-        resource.data.email == request.auth.token.email ||
+        resource.data.email.lower() == request.auth.token.email.lower() ||
         resource.data.agencyId == request.auth.uid
       ));
       

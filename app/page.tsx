@@ -947,7 +947,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
             // Create initial user document
             const isDefaultSuperAdmin = user.email === "jagofeed@gmail.com";
             const initialRole = isDefaultSuperAdmin ? "super-admin" : "user";
-            const initialStatus = isDefaultSuperAdmin ? "active" : "pending";
+            const initialStatus = "active";
             
             const newUser = {
               uid: user.uid,
