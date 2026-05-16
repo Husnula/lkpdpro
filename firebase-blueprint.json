@@ -9,8 +9,12 @@
         "email": { "type": "string" },
         "displayName": { "type": "string" },
         "photoURL": { "type": "string" },
-        "role": { "type": "string", "enum": ["user", "admin"] },
+        "role": { "type": "string", "enum": ["user", "agency", "admin", "super-admin"] },
         "status": { "type": "string", "enum": ["pending", "active", "suspended"] },
+        "licenseStatus": { "type": "string", "enum": ["none", "unlimited", "capped"] },
+        "userQuota": { "type": "integer" },
+        "usageCount": { "type": "integer" },
+        "purchaseDate": { "type": "string", "format": "date-time" },
         "lastLogin": { "type": "string", "format": "date-time" }
       },
       "required": ["uid", "email", "role", "status"]

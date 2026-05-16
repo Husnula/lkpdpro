@@ -39,7 +39,10 @@ service cloud.firestore {
           request.auth.token.email == 'jagofeed@gmail.com' ||
           (
             exists(/databases/$(database)/documents/users/$(request.auth.uid))
-            && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+            && (
+              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super-admin'
+            )
           )
         );
     }
@@ -56,13 +59,17 @@ service cloud.firestore {
     }
 
     function isValidUser(data) {
-      let requiredFields = ['uid', 'email', 'role', 'status', 'lastLogin'];
+      let requiredFields = ['email', 'role', 'status']; // Minimum required for skeleton
       return data.keys().hasAll(requiredFields)
-        && data.uid == request.auth.uid
         && data.email is string && data.email.size() <= 256
-        && (data.role in ['user', 'admin'])
+        && (data.role in ['user', 'agency', 'admin', 'super-admin'])
         && (data.status in ['pending', 'active', 'suspended'])
-        && data.lastLogin == request.time
+        && (!('uid' in data) || data.uid == null || data.uid is string)
+        && (!('lastLogin' in data) || data.lastLogin == null || data.lastLogin is timestamp)
+        && (!('licenseStatus' in data) || data.licenseStatus in ['none', 'unlimited', 'capped'])
+        && (!('userQuota' in data) || data.userQuota is int)
+        && (!('usageCount' in data) || data.usageCount is int)
+        && (!('purchaseDate' in data) || (data.purchaseDate is string || data.purchaseDate == null))
         && (!('displayName' in data) || data.displayName == null || (data.displayName is string && data.displayName.size() <= 256))
         && (!('photoURL' in data) || data.photoURL == null || (data.photoURL is string && data.photoURL.size() <= 1024));
     }
@@ -85,29 +92,51 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow list: if isAdmin();
-      allow get: if (isOwner(userId) || isAdmin()) && isValidId(userId);
+      // Allow users to find their skeleton document (invited by agency) by email query
+      allow list: if isAdmin() || (isSignedIn() && resource.data.email == request.auth.token.email);
       
-      allow create: if isOwner(userId) 
-        && isValidId(userId) 
-        && isValidUser(incoming())
-        && incoming().keys().size() >= 5 && incoming().keys().size() <= 7
-        && (
-          (isAdminEmail() && incoming().role == 'admin' && incoming().status == 'active') ||
-          (!isAdminEmail() && incoming().role == 'user' && incoming().status == 'pending')
-        );
+      // Allow read if owner, admin, or matching email (for skeleton)
+      allow read: if isOwner(userId) || isAdmin() || (isSignedIn() && resource.data.email == request.auth.token.email);
+      
+      allow create: if (
+        // Case 1: Standard Self-registration (using UID as document ID)
+        (isOwner(userId) 
+          && isValidId(userId) 
+          && isValidUser(incoming())
+          && incoming().uid == request.auth.uid
+          && (
+            (isAdminEmail() && incoming().role == 'super-admin' && incoming().status == 'active') ||
+            (!isAdminEmail() && incoming().role == 'user' && incoming().status == 'pending')
+          )
+        ) ||
+        // Case 2: Agency creating skeleton user (random document ID)
+        (isSignedIn() 
+          && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'agency'
+          && incoming().agencyId == request.auth.uid
+          && incoming().role == 'user'
+          && incoming().status == 'active'
+          && isValidUser(incoming())
+        ) ||
+        // Case 3: User migrating skeleton data to their own UID-based document
+        (isOwner(userId) && isValidUser(incoming()) && incoming().uid == request.auth.uid)
+      );
         
       allow update: if isValidId(userId) && (
         (isOwner(userId) && isValidUser(incoming())
           && (
-            // Action: Profile Update (Self)
+            // Profile Update (Self)
             (incoming().diff(existing()).affectedKeys().hasOnly(['lastLogin', 'displayName', 'photoURL']) && incoming().role == existing().role && incoming().status == existing().status) ||
-            // Action: Admin Bootstrap (Self)
-            (isAdminEmail() && incoming().role == 'admin' && incoming().status == 'active')
+            // Agency/Admin self-maintenance
+            (isAdminEmail() && incoming().role == 'super-admin' && incoming().status == 'active')
           )
         )
-        || (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'role']))
+        || 
+        // Super admin can update everything (role, license, quota, status)
+        (isAdminEmail() && isValidUser(incoming()))
       );
+
+      // Allow users to delete their old skeleton doc AFTER migrating to UID-based doc
+      allow delete: if isAdmin() || (isSignedIn() && existing().email == request.auth.token.email);
     }
 
     match /lkpds/{lkpdId} {

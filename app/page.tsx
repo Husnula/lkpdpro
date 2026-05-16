@@ -20,7 +20,7 @@ import Link from 'next/link';
 import { db, handleFirestoreError, OperationType } from '@/lib/firebase';
 import { 
   doc, getDoc, setDoc, collection, query, where, getDocs, 
-  addDoc, updateDoc, deleteDoc, serverTimestamp, orderBy 
+  addDoc, updateDoc, deleteDoc, serverTimestamp, orderBy, increment 
 } from 'firebase/firestore';
 
 
@@ -233,6 +233,392 @@ const JENJANG_MAP: Record<string, any> = {
   "Umum / Kursus": { types: ["Pemula", "Menengah", "Mahir", "Karyawan", "Hobi"] }
 };
 
+// --- Team Manager Component (For Agencies) ---
+function TeamManager({ userProfile }: { userProfile: any }) {
+  const [members, setMembers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [newEmail, setNewEmail] = useState("");
+  const [isAdding, setIsAdding] = useState(false);
+
+  const fetchMembers = async () => {
+    setLoading(true);
+    try {
+      const q = query(collection(db, "users"), where("agencyId", "==", userProfile.uid));
+      const snap = await getDocs(q);
+      setMembers(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    } catch (e) {
+      console.error("Failed to fetch team members", e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (userProfile?.uid) fetchMembers();
+  }, [userProfile]);
+
+  const handleAddMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newEmail.trim()) return;
+
+    // Check quota
+    if (userProfile?.licenseStatus === 'capped' && (userProfile?.usageCount || 0) >= (userProfile?.userQuota || 0)) {
+      alert("Kuota tim Anda sudah penuh. Silakan hubungi Admin untuk meningkatkan kuota.");
+      return;
+    }
+
+    setIsAdding(true);
+    try {
+      // Find if user already exists
+      const q = query(collection(db, "users"), where("email", "==", newEmail.trim().toLowerCase()));
+      const snap = await getDocs(q);
+      
+      if (!snap.empty) {
+        const userDoc = snap.docs[0];
+        if (userDoc.data().agencyId) {
+          alert("User ini sudah terdaftar di tim lain.");
+          return;
+        }
+        await updateDoc(doc(db, "users", userDoc.id), {
+          agencyId: userProfile.uid,
+          role: "user",
+          status: "active"
+        });
+      } else {
+        // Create skeleton user
+        await addDoc(collection(db, "users"), {
+          uid: null, // Placeholder for future sync
+          email: newEmail.trim().toLowerCase(),
+          agencyId: userProfile.uid,
+          role: "user",
+          status: "active",
+          createdAt: serverTimestamp(),
+          lastLogin: null, // Placeholder
+          licenseStatus: "none",
+          userQuota: 0,
+          usageCount: 0,
+          displayName: "",
+          photoURL: ""
+        });
+      }
+
+      // Update Agency's usage count
+      await updateDoc(doc(db, "users", userProfile.uid), {
+        usageCount: increment(1)
+      });
+
+      setNewEmail("");
+      fetchMembers();
+      alert("Berhasil menambahkan anggota tim.");
+    } catch (err) {
+      alert("Gagal menambahkan anggota: " + (err as Error).message);
+    } finally {
+      setIsAdding(false);
+    }
+  };
+
+  const handleRemoveMember = async (memberId: string) => {
+    if (!confirm("Hapus anggota ini dari tim?")) return;
+    try {
+      await updateDoc(doc(db, "users", memberId), {
+        agencyId: null
+      });
+      await updateDoc(doc(db, "users", userProfile.uid), {
+        usageCount: increment(-1)
+      });
+      fetchMembers();
+    } catch (e) {
+      alert("Gagal menghapus: " + (e as Error).message);
+    }
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto p-4 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-1">My Team</h1>
+        <p className="text-slate-500">Kelola anggota tim / user Anda ({userProfile?.usageCount || 0} / {userProfile?.licenseStatus === 'unlimited' ? '∞' : (userProfile?.userQuota || 0)} digunakan).</p>
+      </div>
+
+      <form onSubmit={handleAddMember} className="mb-8 bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm flex gap-4">
+        <div className="flex-1">
+          <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Email Anggota Baru</label>
+          <input 
+            type="email"
+            placeholder="email@contoh.com"
+            value={newEmail}
+            onChange={(e) => setNewEmail(e.target.value)}
+            className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:ring-2 ring-blue-500/20"
+            required
+          />
+        </div>
+        <div className="flex items-end">
+          <button 
+            type="submit"
+            disabled={isAdding}
+            className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all disabled:opacity-50"
+          >
+            {isAdding ? <RefreshCw className="w-5 h-5 animate-spin" /> : "Tambah Anggota"}
+          </button>
+        </div>
+      </form>
+
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 uppercase text-[10px] font-bold tracking-widest">
+              <tr>
+                <th className="px-6 py-4">Nama / Email</th>
+                <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4">Terakhir Login</th>
+                <th className="px-6 py-4 text-right">Aksi</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              {members.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="px-6 py-8 text-center text-slate-400 italic">Belum ada anggota tim.</td>
+                </tr>
+              ) : members.map((m) => (
+                <tr key={m.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                  <td className="px-6 py-4">
+                    <div className="flex flex-col">
+                      <span className="font-bold text-slate-800 dark:text-white">{m.displayName || "Menunggu..."}</span>
+                      <span className="text-xs text-slate-400">{m.email}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${m.displayName ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}`}>
+                      {m.displayName ? 'Active' : 'Invited'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-xs font-mono text-slate-400">
+                    {m.lastLogin ? new Date(m.lastLogin.seconds * 1000).toLocaleDateString() : "-"}
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <button 
+                      onClick={() => handleRemoveMember(m.id)}
+                      className="text-red-600 hover:text-red-700 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- Agency Manager Component (Super Admin Only) ---
+function AgencyManager({ isDarkMode }: { isDarkMode: boolean }) {
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [isSavingLocal, setIsSavingLocal] = useState(false);
+
+  const fetchUsers = async () => {
+    setLoading(true);
+    try {
+      const q = query(collection(db, "users"), orderBy("lastLogin", "desc"));
+      const snap = await getDocs(q);
+      setUsers(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    } catch (e) {
+      console.error("Failed to fetch users", e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const handleUpdateUser = async (userId: string, updates: any) => {
+    console.log(`[AgencyManager] Updating user ${userId} with:`, updates);
+    if (!userId) {
+      alert("Error: User ID tidak ditemukan.");
+      return;
+    }
+    setIsSavingLocal(true);
+    try {
+      await updateDoc(doc(db, "users", userId), updates);
+      console.log(`[AgencyManager] Update successful for ${userId}`);
+      await fetchUsers();
+      setEditingUser(null);
+    } catch (e) {
+      console.error(`[AgencyManager] Update failed for ${userId}`, e);
+      alert("Gagal update user: " + (e as Error).message);
+    } finally {
+      setIsSavingLocal(false);
+    }
+  };
+
+  return (
+    <div className="max-w-6xl mx-auto p-4 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="mb-8 flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-1">Agency Management</h1>
+          <p className="text-slate-500">Kelola lisensi pembeli dan berikan akses Agency.</p>
+        </div>
+        <button onClick={fetchUsers} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full">
+          <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+        </button>
+      </div>
+
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 uppercase text-[10px] font-bold tracking-widest">
+              <tr>
+                <th className="px-6 py-4">User</th>
+                <th className="px-6 py-4">Role</th>
+                <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4">License</th>
+                <th className="px-6 py-4">Quota</th>
+                <th className="px-6 py-4">Aksi</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              {users.map((u) => (
+                <tr key={u.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                  <td className="px-6 py-4">
+                    <div className="flex flex-col">
+                      <span className="font-bold text-slate-800 dark:text-white">{u.displayName || u.email}</span>
+                      <span className="text-xs text-slate-400">{u.email}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <select 
+                      value={u.role || "user"}
+                      disabled={u.email === 'jagofeed@gmail.com'}
+                      onChange={(e) => handleUpdateUser(u.id, { role: e.target.value })}
+                      className="bg-transparent font-medium text-blue-600 dark:text-blue-400 outline-none cursor-pointer"
+                    >
+                      <option value="user">User</option>
+                      <option value="agency">Agency</option>
+                      <option value="admin">Admin</option>
+                      <option value="super-admin">Super Admin</option>
+                    </select>
+                  </td>
+                  <td className="px-6 py-4">
+                    <select 
+                      value={u.status || "pending"}
+                      onChange={(e) => handleUpdateUser(u.id, { status: e.target.value })}
+                      className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase border cursor-pointer ${
+                        u.status === 'active' ? 'bg-emerald-50 border-emerald-100 text-emerald-600 dark:bg-emerald-900/20 dark:border-emerald-800' : 
+                        u.status === 'suspended' ? 'bg-red-50 border-red-100 text-red-600 dark:bg-red-900/20 dark:border-red-800' : 
+                        'bg-amber-50 border-amber-100 text-amber-600 dark:bg-amber-900/20 dark:border-amber-800'
+                      }`}
+                    >
+                      <option value="active">Active</option>
+                      <option value="pending">Pending</option>
+                      <option value="suspended">Suspended</option>
+                    </select>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase ${
+                      u.licenseStatus === 'unlimited' ? 'bg-purple-100 text-purple-600 dark:bg-purple-900/30' : 
+                      u.licenseStatus === 'capped' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30' : 
+                      'bg-slate-100 text-slate-400 dark:bg-slate-800'
+                    }`}>
+                      {u.licenseStatus || 'none'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 font-mono text-xs">
+                    {u.usageCount || 0} / {u.licenseStatus === 'unlimited' ? '∞' : (u.userQuota || 0)}
+                  </td>
+                  <td className="px-6 py-4">
+                    <button 
+                      onClick={() => setEditingUser(u)}
+                      className="text-blue-600 hover:underline font-bold text-xs"
+                    >
+                      Edit Lisensi
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {editingUser && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-300">
+            <h2 className="text-xl font-bold mb-4">Edit Lisensi Agency</h2>
+            <p className="text-sm text-slate-500 mb-6 font-medium">User: {editingUser.email}</p>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Tipe Lisensi</label>
+                <select 
+                  className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl px-4 py-2"
+                  value={editingUser.licenseStatus || "none"}
+                  onChange={(e) => setEditingUser({...editingUser, licenseStatus: e.target.value})}
+                >
+                  <option value="none">Tanpa Lisensi</option>
+                  <option value="unlimited">Unlimited (Promo Mei)</option>
+                  <option value="capped">Capped (Standard)</option>
+                </select>
+              </div>
+
+              {editingUser.licenseStatus === 'capped' && (
+                <div>
+                  <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Kuota User/Proyek</label>
+                  <input 
+                    type="number"
+                    className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl px-4 py-2"
+                    value={editingUser.userQuota || 100}
+                    onChange={(e) => setEditingUser({...editingUser, userQuota: parseInt(e.target.value)})}
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Tgl Pembelian</label>
+                <input 
+                  type="date"
+                  className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl px-4 py-2"
+                  value={editingUser.purchaseDate ? editingUser.purchaseDate.split('T')[0] : ""}
+                  onChange={(e) => setEditingUser({...editingUser, purchaseDate: e.target.value})}
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-8">
+              <button 
+                onClick={() => setEditingUser(null)}
+                disabled={isSavingLocal}
+                className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold transition-all disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button 
+                onClick={() => {
+                  const licStatus = editingUser.licenseStatus || 'none';
+                  handleUpdateUser(editingUser.id, {
+                    licenseStatus: licStatus,
+                    userQuota: Number(editingUser.userQuota) || 0,
+                    purchaseDate: editingUser.purchaseDate || null,
+                    role: licStatus !== 'none' ? 'agency' : (editingUser.role || 'user')
+                  });
+                }}
+                disabled={isSavingLocal}
+                className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isSavingLocal ? <RefreshCw className="w-4 h-4 animate-spin" /> : "Simpan"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function App() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [view, setView] = useState<"dashboard" | "generator" | "api_settings">("dashboard");
@@ -324,8 +710,38 @@ export default function App() {
   // --- End: Project Health/Memory Logic ---
 
   const [isMounted, setIsMounted] = useState(false);
+  const [userProfile, setUserProfile] = useState<any>(null);
   const [userRole, setUserRole] = useState<string>("user");
   const [userStatus, setUserStatus] = useState<string>("loading");
+
+  const isPromoPeriod = () => {
+    const now = new Date();
+    const start = new Date("2026-05-15T00:00:00Z");
+    const end = new Date("2026-05-17T23:59:59Z");
+    return now >= start && now <= end;
+  };
+
+  const isQuotaExceeded = () => {
+    if (userRole === "super-admin" || userRole === "admin") return false;
+    
+    // If part of an agency, check agency status first
+    if (userProfile?.agencyId) {
+      // Note: Ideally we'd fetch agency profile here, but for now we assume 
+      // if they are in the team, they follow their own user limit OR stay active.
+      // In a real app, we'd check if (agencyProfile.status === 'suspended')
+    }
+
+    if (userProfile?.licenseStatus === "unlimited") return false;
+    if (userProfile?.role === "agency" && userProfile?.licenseStatus === "capped") {
+      return (userProfile.usageCount || 0) >= (userProfile.userQuota || 0);
+    }
+    
+    // Default user limit (10 projects for free users)
+    if (userRole === "user" && !userProfile?.licenseStatus) {
+      return projects.length >= 10; 
+    }
+    return false;
+  };
 
 const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
   const [isExpandedRevisionOutline, setIsExpandedRevisionOutline] = useState(false);
@@ -386,6 +802,18 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
         };
         const docRef = await addDoc(collection(db, "lkpds"), newProject);
         setProjectId(docRef.id);
+
+        // Update Usage Count for license
+        if (userRole === "agency" || userRole === "user") {
+          const userRef = doc(db, "users", user.uid);
+          await updateDoc(userRef, {
+            usageCount: increment(1)
+          });
+          setUserProfile((prev: any) => ({
+            ...prev,
+            usageCount: (prev?.usageCount || 0) + 1
+          }));
+        }
       }
       
       setSaveSuccess(true);
@@ -467,28 +895,76 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
     if (user) {
       const fetchUserData = async () => {
         try {
-          const userSnap = await getDoc(doc(db, "users", user.uid));
+          const userRef = doc(db, "users", user.uid);
+          let userSnap = await getDoc(userRef);
+          
+          let profileToUse = userSnap.exists() ? userSnap.data() : null;
+
+          // Check if there is a pending license/skeleton for this email
+          const q = query(collection(db, "users"), where("email", "==", user.email?.toLowerCase()));
+          const querySnap = await getDocs(q);
+          
+          if (!querySnap.empty) {
+            const skeletonDoc = querySnap.docs[0];
+            const skeletonData = skeletonDoc.data();
+            
+            // If it's a skeleton (doesn't match the current user UID doc)
+            if (skeletonDoc.id !== user.uid) {
+              console.log("Found pending license/skeleton doc, migrating...");
+              const mergedUser = {
+                ...(profileToUse || {}),
+                ...skeletonData,
+                uid: user.uid,
+                lastLogin: serverTimestamp(),
+                displayName: user.displayName || profileToUse?.displayName || skeletonData.displayName || "",
+                photoURL: user.photoURL || profileToUse?.photoURL || skeletonData.photoURL || ""
+              };
+              
+              await setDoc(userRef, mergedUser);
+              await deleteDoc(doc(db, "users", skeletonDoc.id));
+              
+              userSnap = await getDoc(userRef); // Refresh
+              profileToUse = userSnap.data();
+            }
+          }
+
           if (userSnap.exists()) {
-            const data = userSnap.data();
+            let data = userSnap.data();
+            
+            // AUTO-BOOTSTRAP: Force jagofeed@gmail.com to be super-admin if not already
+            if (user.email === "jagofeed@gmail.com" && data.role !== "super-admin") {
+              await updateDoc(doc(db, "users", user.uid), { 
+                role: "super-admin", 
+                status: "active" 
+              });
+              data = { ...data, role: "super-admin", status: "active" };
+            }
+
+            setUserProfile(data);
             setUserRole(data.role || "user");
-            setUserStatus(data.status || "pending");
+            setUserStatus(data.status || "active");
           } else {
             // Create initial user document
-            const isDefaultAdmin = user.email === "jagofeed@gmail.com";
-            const initialRole = isDefaultAdmin ? "admin" : "user";
-            const initialStatus = isDefaultAdmin ? "active" : "pending";
+            const isDefaultSuperAdmin = user.email === "jagofeed@gmail.com";
+            const initialRole = isDefaultSuperAdmin ? "super-admin" : "user";
+            const initialStatus = isDefaultSuperAdmin ? "active" : "pending";
             
             const newUser = {
               uid: user.uid,
               email: user.email,
               role: initialRole,
               status: initialStatus,
+              licenseStatus: "none",
+              userQuota: 0,
+              usageCount: 0,
+              purchaseDate: null,
               lastLogin: serverTimestamp(),
               displayName: user.displayName || "",
               photoURL: user.photoURL || ""
             };
             
             await setDoc(doc(db, "users", user.uid), newUser);
+            setUserProfile(newUser);
             setUserRole(initialRole);
             setUserStatus(initialStatus);
           }
@@ -625,6 +1101,13 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
 
   const handleGenerateOutline = async () => {
     console.log("Generating Outline...");
+    
+    // License Check
+    if (isQuotaExceeded()) {
+      setErrorMsg("Kuota Lisensi Habis: Anda telah mencapai batas maksimal pembuatan proyek untuk lisensi ini. Silakan hubungi Super Admin untuk memperpanjang/meningkatkan lisensi.");
+      return;
+    }
+
     setIsGenerating(true);
     setErrorMsg("");
     try {
@@ -1041,6 +1524,22 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
             >
               <LayoutDashboard className="w-4 h-4" /> Dashboard
             </button>
+            {userRole === "super-admin" && (
+              <button 
+                onClick={() => setView("agency_management" as any)}
+                className={`w-full border rounded-xl py-2.5 px-4 flex items-center justify-center gap-2 font-bold text-sm transition-all active:scale-95 ${view as string === 'agency_management' ? 'bg-slate-100 border-slate-300 dark:bg-slate-800 dark:border-slate-700 text-blue-600' : 'bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50'}`}
+              >
+                <ShieldAlert className="w-4 h-4" /> Agency Management
+              </button>
+            )}
+            {userRole === "agency" && (
+              <button 
+                onClick={() => setView("team_management" as any)}
+                className={`w-full border rounded-xl py-2.5 px-4 flex items-center justify-center gap-2 font-bold text-sm transition-all active:scale-95 ${view as string === 'team_management' ? 'bg-slate-100 border-slate-300 dark:bg-slate-800 dark:border-slate-700 text-blue-600' : 'bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50'}`}
+              >
+                 <User className="w-4 h-4" /> My Team
+              </button>
+            )}
             {userRole === "user" && (
               <button 
                 onClick={() => setView("api_settings")}
@@ -1159,7 +1658,24 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
                 )}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-bold truncate dark:text-white">{user?.displayName || "Guru Hebat"}</p>
-                  <p className="text-xs text-slate-500 truncate">{user?.email}</p>
+                  <p className="text-[10px] text-slate-500 truncate flex items-center gap-1">
+                    {userRole === 'super-admin' ? (
+                      <span className="text-purple-600 font-bold">Super Admin</span>
+                    ) : (
+                      <>
+                        <span className="capitalize">{userProfile?.licenseStatus && userProfile.licenseStatus !== 'none' ? userProfile.licenseStatus : 'Standard'}</span>
+                        {userProfile?.licenseStatus && userProfile.licenseStatus !== 'none' && userProfile.licenseStatus !== 'unlimited' && userRole !== 'admin' && (
+                          <span className="text-blue-600 font-bold">({userProfile?.usageCount || 0}/{userProfile?.userQuota || 10})</span>
+                        )}
+                        {userProfile?.licenseStatus === 'unlimited' && (
+                          <span className="text-purple-600 font-bold">(Unlimited)</span>
+                        )}
+                        {!userProfile?.licenseStatus || userProfile.licenseStatus === 'none' && (
+                          <span className="text-slate-400">({projects.length}/10)</span>
+                        )}
+                      </>
+                    )}
+                  </p>
                 </div>
               </div>
               <button 
@@ -1428,6 +1944,10 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
                   </div>
                 )}
               </div>
+            ) : (view as string) === "agency_management" ? (
+              <AgencyManager isDarkMode={isDarkMode} />
+            ) : (view as string) === "team_management" ? (
+              <TeamManager userProfile={userProfile} />
             ) : (
               <div className={`mx-auto p-4 md:p-8 transition-all duration-500 ${step === 3 ? 'max-w-full' : 'max-w-6xl'}`}>
                 {/* EXISTING GENERATOR UI */}
