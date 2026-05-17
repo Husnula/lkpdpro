@@ -175,14 +175,15 @@ const callGeminiAPI = async (
   systemInstruction: string, 
   isJson = false,
   role: string = "user",
-  userKeys: string[] = []
+  userKeys: string[] = [],
+  isAutoinjected: boolean = false
 ) => {
   // 1. Determine Keys to use
   let keysToTry: string[] = [];
   
-  if (role === "admin") {
+  if (isAutoinjected) {
     const adminKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-    if (!adminKey) throw new Error("Admin API Key (NEXT_PUBLIC_GEMINI_API_KEY) tidak ditemukan di environment.");
+    if (!adminKey) throw new Error("API Key sistem tidak ditemukan. Hubungi developer.");
     keysToTry = [adminKey];
   } else {
     // User Rule: BYOK
@@ -1004,7 +1005,11 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
     setUserApiKeys(newKeys);
   };
 
-  const isUserKeyReady = userRole === "admin" || userApiKeys.some(k => k.trim().length > 10);
+  const isAutoinjected = useMemo(() => {
+    return userRole === "super-admin" || userRole === "admin";
+  }, [userRole]);
+
+  const isUserKeyReady = isAutoinjected || userApiKeys.some(k => k && k.trim().length > 10);
 
   // Initial theme logic
   useEffect(() => {
@@ -1028,7 +1033,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
     setIsSuggestingMateri(true);
     try {
       const prompt = `Berikan 1 ide topik/materi spesifik yang sangat menarik dan kreatif untuk jenjang ${formData.jenjang} (${formData.fase} - ${formData.kelas}) mata pelajaran ${formData.mapel}. Hanya keluarkan nama materinya saja, maksimal 5 kata.`;
-      const result = await callGeminiAPI(prompt, "Kamu adalah asisten guru yang jenius.", false, userRole, userApiKeys);
+      const result = await callGeminiAPI(prompt, "Kamu adalah asisten guru yang jenius.", false, userRole, userApiKeys, isAutoinjected);
       if (result) {
         setFormData((prev: any) => ({ ...prev, materi: result?.replace(/["*]/g, '').trim() }));
       }
@@ -1044,7 +1049,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
     setIsSuggestingVisual(true);
     try {
       const prompt = `Buatkan 1 instruksi kalimat visual yang kreatif, menarik, dan spesifik untuk generator gambar berdasarkan gaya "${formData.visual}" dan karakter "${formData.karakter}". Materinya adalah "${formData.mapel} - ${formData.materi}".`;
-      const result = await callGeminiAPI(prompt, "Kamu adalah art director kreatif.", false, userRole, userApiKeys);
+      const result = await callGeminiAPI(prompt, "Kamu adalah art director kreatif.", false, userRole, userApiKeys, isAutoinjected);
       if (result) {
         setFormData((prev: any) => ({ ...prev, pesanKhusus: result?.replace(/["*]/g, '').trim() }));
       }
@@ -1087,7 +1092,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
     setIsSuggestingFooter(true);
     try {
       const prompt = `Buatkan 1 kalimat slogan singkat (maksimal 6 kata) untuk menyemangati siswa belajar.`;
-      const result = await callGeminiAPI(prompt, "Kamu adalah pemberi motivasi anak.", false, userRole, userApiKeys);
+      const result = await callGeminiAPI(prompt, "Kamu adalah pemberi motivasi anak.", false, userRole, userApiKeys, isAutoinjected);
       if (result) {
         setFormData((prev: any) => ({ ...prev, footerText: result?.replace(/["*]/g, '').trim() }));
       }
@@ -1148,7 +1153,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
         
         Alokasi waktu estimasi total: ±XX menit
       `;
-      const result = await callGeminiAPI(userPrompt, SYSTEM_PROMPT, false, userRole, userApiKeys);
+      const result = await callGeminiAPI(userPrompt, SYSTEM_PROMPT, false, userRole, userApiKeys, isAutoinjected);
       if (result) {
         setOutlineText(result.trim());
         goToStep(2);
@@ -1179,7 +1184,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
         Tolong perbarui outline di atas sesuai dengan permintaan revisi. 
         Pastikan format tetap rapi dan keluarkan HANYA teks outline yang sudah direvisi.
       `;
-      const result = await callGeminiAPI(userPrompt, SYSTEM_PROMPT, false, userRole, userApiKeys);
+      const result = await callGeminiAPI(userPrompt, SYSTEM_PROMPT, false, userRole, userApiKeys, isAutoinjected);
       if (result) {
         setOutlineText(result.trim());
         setRevisionInput("");
@@ -1265,7 +1270,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
         - Jangan kurangi kualitas detail visual_prompt-nya.
       `;
       
-      const resultText = await callGeminiAPI(userPrompt, SYSTEM_PROMPT, true, userRole, userApiKeys);
+      const resultText = await callGeminiAPI(userPrompt, SYSTEM_PROMPT, true, userRole, userApiKeys, isAutoinjected);
       const parsedData = resultText ? extractJSON(resultText) : null;
       
       if (parsedData) {
@@ -1356,7 +1361,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
         ${footerTemplateStr}
       `;
       
-      const resultText = await callGeminiAPI(userPrompt, SYSTEM_PROMPT, true, userRole, userApiKeys);
+      const resultText = await callGeminiAPI(userPrompt, SYSTEM_PROMPT, true, userRole, userApiKeys, isAutoinjected);
       const parsedData = resultText ? extractJSON(resultText) : null;
       
       setPageData((prev: any) => ({ 
@@ -1540,7 +1545,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
                  <User className="w-4 h-4" /> My Team
               </button>
             )}
-            {userRole === "user" && (
+            {userRole !== "super-admin" && userRole !== "admin" && (
               <button 
                 onClick={() => setView("api_settings")}
                 className={`w-full border rounded-xl py-2.5 px-4 flex items-center justify-center gap-2 font-bold text-sm transition-all active:scale-95 ${view === 'api_settings' ? 'bg-slate-100 border-slate-300 dark:bg-slate-800 dark:border-slate-700 text-blue-600' : 'bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50'}`}
@@ -2279,7 +2284,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
                       <span>Generate Outline</span>
                       {!isGenerating && <ChevronRight className="w-6 h-6" />}
                     </button>
-                    {!isUserKeyReady && userRole !== "admin" && (
+                    {!isUserKeyReady && !isAutoinjected && (
                       <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl flex items-center gap-3 max-w-md animate-in slide-in-from-right-4">
                         <ShieldAlert className="w-5 h-5 text-amber-600 flex-shrink-0" />
                         <p className="text-xs text-amber-700 dark:text-amber-400 font-medium">
