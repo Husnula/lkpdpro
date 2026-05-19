@@ -49,7 +49,7 @@ export default function AdminDashboard() {
     const checkAdmin = async () => {
       try {
         const userSnap = await getDoc(doc(db, "users", user.uid));
-        if (userSnap.exists() && userSnap.data().role === "admin") {
+        if (userSnap.exists() && (userSnap.data().role === "admin" || userSnap.data().role === "super-admin")) {
           setIsAdmin(true);
         } else {
           setIsAdmin(false);

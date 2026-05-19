@@ -64,7 +64,7 @@ service cloud.firestore {
       return data.keys().hasAll(requiredFields)
         && data.email is string && data.email.size() <= 256
         && (data.role in ['user', 'agency', 'admin', 'super-admin'])
-        && (data.status in ['pending', 'active', 'suspended'])
+        && (data.status in ['pending', 'active', 'suspended', 'rejected'])
         && (!('uid' in data) || data.uid == null || data.uid is string)
         && (!('lastLogin' in data) || data.lastLogin == null || data.lastLogin is timestamp)
         && (!('licenseStatus' in data) || data.licenseStatus in ['none', 'unlimited', 'capped'])
@@ -159,8 +159,8 @@ service cloud.firestore {
             incoming().diff(existing()).affectedKeys().hasOnly(['agencyId', 'role', 'status'])
           )
         ) || 
-        // Super admin can update everything (role, license, quota, status)
-        (isAdminEmail() && isValidUser(incoming()))
+        // Admin can update everything (role, license, quota, status)
+        (isAdmin() && isValidUser(incoming()))
       );
 
       // Allow users to delete their old skeleton doc AFTER migrating to UID-based doc

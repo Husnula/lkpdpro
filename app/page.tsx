@@ -906,19 +906,21 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
           const querySnap = await getDocs(q);
           
           if (!querySnap.empty) {
-            const skeletonDoc = querySnap.docs[0];
-            const skeletonData = skeletonDoc.data();
+            // Find doc that is NOT the current UID (meaning it's a skeleton with random ID)
+            const skeletonDoc = querySnap.docs.find(doc => doc.id !== user.uid);
             
-            // If it's a skeleton (doesn't match the current user UID doc)
-            if (skeletonDoc.id !== user.uid) {
+            if (skeletonDoc) {
+              const skeletonData = skeletonDoc.data();
               console.log("Found pending license/skeleton doc, migrating...");
               const mergedUser = {
                 ...(profileToUse || {}),
                 ...skeletonData,
                 uid: user.uid,
+                email: user.email?.toLowerCase(),
                 lastLogin: serverTimestamp(),
                 displayName: user.displayName || profileToUse?.displayName || skeletonData.displayName || "",
-                photoURL: user.photoURL || profileToUse?.photoURL || skeletonData.photoURL || ""
+                photoURL: user.photoURL || profileToUse?.photoURL || skeletonData.photoURL || "",
+                status: "active" // Ensure it becomes active once migrated
               };
               
               await setDoc(userRef, mergedUser);
@@ -932,6 +934,20 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
           if (userSnap.exists()) {
             let data = userSnap.data();
             
+            // ALWAYS sync latest info to keep agency/admin dashboards updated
+            const needsUpdate = 
+              data.displayName !== user.displayName || 
+              data.photoURL !== user.photoURL || 
+              !data.lastLogin;
+
+            if (needsUpdate) {
+              await updateDoc(userRef, {
+                displayName: user.displayName || data.displayName || "",
+                photoURL: user.photoURL || data.photoURL || "",
+                lastLogin: serverTimestamp()
+              });
+            }
+
             // AUTO-BOOTSTRAP: Force jagofeed@gmail.com to be super-admin if not already
             if (user.email === "jagofeed@gmail.com" && data.role !== "super-admin") {
               await updateDoc(doc(db, "users", user.uid), { 
