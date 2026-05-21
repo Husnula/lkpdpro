@@ -50,10 +50,9 @@ service cloud.firestore {
       return isSignedIn()
         && (
           isAdmin() ||
-          !exists(/databases/$(database)/documents/users/$(request.auth.uid)) ||
           (
-            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'active' ||
-            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'pending'
+            exists(/databases/$(database)/documents/users/$(request.auth.uid))
+            && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'active'
           )
         );
     }
@@ -139,6 +138,13 @@ service cloud.firestore {
           && (
             // Profile Update (Self)
             (incoming().diff(existing()).affectedKeys().hasOnly(['lastLogin', 'displayName', 'photoURL']) && incoming().role == existing().role && incoming().status == existing().status) ||
+            // Migration Support: Owner sets agencyId, role 'user', and status 'active' when linking to a valid agency doc
+            (incoming().diff(existing()).affectedKeys().hasOnly(['lastLogin', 'displayName', 'photoURL', 'agencyId', 'status', 'role'])
+              && incoming().status == 'active'
+              && incoming().role == 'user'
+              && ('agencyId' in incoming()) && incoming().agencyId != null
+              && get(/databases/$(database)/documents/users/$(incoming().agencyId)).data.role == 'agency'
+            ) ||
             // Agency/Admin self-maintenance or usage increment
             (incoming().diff(existing()).affectedKeys().hasOnly(['usageCount'])) ||
             (isAdminEmail() && incoming().role == 'super-admin' && incoming().status == 'active')
@@ -149,21 +155,32 @@ service cloud.firestore {
           && isAgencyEmail()
           && isValidUser(incoming())
           && (
-            // Action: Add to team (Updating another user)
+            // Action 1: Add to team (Updating another user)
             // Can only add if the user doesn't already have an agency
-            (!('agencyId' in existing()) || existing().agencyId == null) &&
-            incoming().agencyId == request.auth.uid &&
-            incoming().role == 'user' &&
-            incoming().status == 'active' &&
-            incoming().diff(existing()).affectedKeys().hasOnly(['agencyId', 'role', 'status'])
+            (
+              (!('agencyId' in existing()) || existing().agencyId == null) &&
+              incoming().agencyId == request.auth.uid &&
+              incoming().role == 'user' &&
+              incoming().status == 'active' &&
+              incoming().diff(existing()).affectedKeys().hasOnly(['agencyId', 'role', 'status'])
+            ) ||
+            // Action 2: Remove from team (Setting agencyId to null)
+            (
+              existing().agencyId == request.auth.uid &&
+              (!('agencyId' in incoming()) || incoming().agencyId == null) &&
+              incoming().status == 'pending' &&
+              incoming().diff(existing()).affectedKeys().hasOnly(['agencyId', 'status'])
+            )
           )
         ) || 
         // Admin can update everything (role, license, quota, status)
         (isAdmin() && isValidUser(incoming()))
       );
 
-      // Allow users to delete their old skeleton doc AFTER migrating to UID-based doc
-      allow delete: if isAdmin() || (isSignedIn() && existing().email == request.auth.token.email);
+      // Allow user themselves, admin, or assigned agency (to delete skeleton)
+      allow delete: if isAdmin() 
+        || (isSignedIn() && existing().email == request.auth.token.email)
+        || (isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && isAgencyEmail() && existing().agencyId == request.auth.uid);
     }
 
     match /lkpds/{lkpdId} {

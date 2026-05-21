@@ -6,7 +6,7 @@ import { Swiper, SwiperSlide } from 'swiper/react';
 import type { Swiper as SwiperType } from 'swiper';
 import 'swiper/css';
 import { 
-  Check, BookOpen, Settings, FileText, CheckCircle, 
+  Check, BookOpen, Settings, FileText, CheckCircle, XCircle, 
   ChevronRight, Copy, Download, RefreshCw, Palette,
   ArrowLeft, Loader2, AlertCircle, Moon, Sun, Send, Code,
   User, BadgeInfo, Plus, HelpCircle, Bell, Menu, Lightbulb,
@@ -332,9 +332,21 @@ function TeamManager({ userProfile }: { userProfile: any }) {
   const handleRemoveMember = async (memberId: string) => {
     if (!confirm("Hapus anggota ini dari tim?")) return;
     try {
-      await updateDoc(doc(db, "users", memberId), {
-        agencyId: null
-      });
+      const docRef = doc(db, "users", memberId);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (!data.uid) {
+          // It is a skeleton doc, delete entirely
+          await deleteDoc(docRef);
+        } else {
+          // Registered user, unlink agency affiliation and reset status to pending
+          await updateDoc(docRef, {
+            agencyId: null,
+            status: "pending"
+          });
+        }
+      }
       await updateDoc(doc(db, "users", userProfile.uid), {
         usageCount: increment(-1)
       });
@@ -976,7 +988,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
             // Create initial user document
             const isDefaultSuperAdmin = user.email === "jagofeed@gmail.com";
             const initialRole = isDefaultSuperAdmin ? "super-admin" : "user";
-            const initialStatus = "active";
+            const initialStatus = isDefaultSuperAdmin ? "active" : "pending";
             
             const newUser = {
               uid: user.uid,
@@ -1463,7 +1475,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
   }
 
   // Pending Approval View
-  if (userStatus === "pending" && userRole !== "admin") {
+  if (userStatus === "pending" && userRole !== "admin" && userRole !== "super-admin") {
     return (
       <div className={`${isDarkMode ? 'dark' : ''} antialiased h-screen w-full bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4 transition-colors duration-300`}>
         <div className="max-w-md w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 shadow-xl shadow-blue-500/5 text-center animate-in fade-in zoom-in duration-500">
@@ -1499,6 +1511,29 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
               <LogOut className="w-4 h-4" /> Keluar Aplikasi
             </button>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Rejected View
+  if (userStatus === "rejected" && userRole !== "admin" && userRole !== "super-admin") {
+    return (
+      <div className={`${isDarkMode ? 'dark' : ''} antialiased h-screen w-full bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4 transition-colors duration-300`}>
+        <div className="max-w-md w-full bg-white dark:bg-slate-900 border border-red-200 dark:border-red-900 rounded-3xl p-8 shadow-xl shadow-red-500/5 text-center">
+          <div className="w-20 h-20 bg-red-50 dark:bg-red-900/20 rounded-3xl flex items-center justify-center text-red-500 mx-auto mb-6">
+            <XCircle className="w-10 h-10" />
+          </div>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Pendaftaran Ditolak</h1>
+          <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-8">
+            Maaf, permohonan akses Anda ke aplikasi telah ditolak oleh administrator. Silakan hubungi admin untuk info selengkapnya.
+          </p>
+          <button 
+            onClick={() => logout()}
+            className="w-full py-3.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2"
+          >
+            <LogOut className="w-4 h-4" /> Keluar Aplikasi
+          </button>
         </div>
       </div>
     );
