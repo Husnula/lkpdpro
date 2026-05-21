@@ -17,7 +17,7 @@ service cloud.firestore {
     }
 
     function isAdminEmail() {
-      return request.auth.token.email == 'jagofeed@gmail.com' && request.auth.token.email_verified == true;
+      return request.auth.token.email == 'jagofeed@gmail.com';
     }
 
     function isValidId(id) {
@@ -34,7 +34,6 @@ service cloud.firestore {
 
     function isAdmin() {
       return isSignedIn() 
-        && request.auth.token.email_verified == true 
         && (
           request.auth.token.email == 'jagofeed@gmail.com' ||
           (

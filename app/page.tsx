@@ -76,6 +76,17 @@ Mode kesulitan wajib mengubah struktur dan bobot soal, bukan sekadar label:
 - STANDAR: Soal level C1-C4. Pilihan ganda 4 opsi (A, B, C, D). Scaffolding normal.
 - HOTS: Soal level C4-C6 (menganalisis/mengevaluasi/mencipta). Wajib ada stimulus (teks bacaan singkat / infografis / tabel). Wajib ada esai penalaran terbuka (open-ended).
 
+BAGIAN 3B — MODE DRILLING (AKTIF JIKA PARAMETER drilling_mode: true)
+Jika parameter "drilling_mode" bernilai true, terapkan seluruh aturan berikut:
+1. ZERO MATERI: Dilarang keras menyertakan blok materi/teori apapun. Seluruh area konten HANYA berisi soal latihan.
+2. KEPADATAN MAKSIMAL: Gunakan layout multi-kolom (minimal 2 kolom untuk PG). Target 20–40 soal per halaman A4 Portrait untuk tipe pilihan ganda.
+3. TIPE SOAL PADAT: Prioritaskan pilihan ganda dan isian singkat. Untuk HOTS, maksimal 1–2 uraian singkat di bagian akhir.
+4. HEADER MINIMAL: Gunakan HEADER_MINIMAL sangat ringkas, hanya judul topik + tipe soal. Tidak ada dekorasi berlebihan.
+5. PENGELOMPOKAN SOAL: Kelompokkan berdasarkan tipe menggunakan divider tipis dan label bagian yang compact.
+6. FIELD JAWABAN COMPACT: Untuk isian, gunakan garis pendek (________), bukan kotak besar.
+7. ILUSTRASI MINIMAL: Gambar hanya jika menjadi bagian integral soal (stimulus). Dilarang ilustrasi dekoratif.
+8. RASIO OVERRIDE: Parameter "rasio" diabaikan sepenuhnya saat drilling_mode aktif.
+
 BAGIAN 4 — ATURAN SAFE AREA & PRINT MARGIN (SANGAT PENTING UNTUK CETAK)
 Halaman LKPD ini akan dicetak fisik. Pastikan instruksi ini selalu diterapkan pada objek JSON:
 1. Safe Margin: Tetapkan padding/margin keliling minimal 20mm (atau 0.75 inch) pada properti "layout_grid" di JSON. Sesuaikan proporsi ini dengan orientasi yang diminta (Portrait/Landscape).
@@ -669,6 +680,7 @@ export default function App() {
     kelas: 'Kelas 3',
     halaman: 2,
     rasio: '30:70',
+    drillingMode: false,
     mode: 'STANDAR',
     visual: 'PLAYFUL_COLOR',
     namaGuru: '',
@@ -1149,7 +1161,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
         - Fase & Kelas/Tingkat: ${formData.fase} - ${formData.kelas}
         - Jumlah Halaman Siswa: ${numSiswaPages} halaman
         - Jumlah Halaman Guru: ${numGuruPages} halaman (Otomatis ditambahkan di akhir untuk kunci jawaban)
-        - Rasio Materi vs Latihan: ${formData.rasio}
+        - Mode Konten: ${formData.drillingMode ? 'DRILLING MODE AKTIF — Hanya soal latihan padat, ZERO materi teori, target kepadatan soal maksimal per halaman. Outline hanya berisi daftar soal/latihan tanpa alokasi halaman materi.' : `Rasio Materi vs Latihan: ${formData.rasio}`}
         - Mode Kesulitan: ${formData.mode}
         - Gaya Visual: ${formData.visual}
         - Tema Karakter (Maskot): ${formData.karakter}
@@ -1313,7 +1325,12 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
     try {
       const isGuru = pageId.startsWith('Guru');
       const pageTargetName = isGuru ? `Halaman ${pageId} (Kunci Jawaban)` : `Halaman ${pageId} (Lembar Kerja Siswa)`;
-      const optionalInstructions = formData.pesanKhusus ? 'User meminta: "' + formData.pesanKhusus + '". Wajib integrasikan permintaan ini kuat-kuat ke dalam tema konten dan terutama "visual_prompt" di setiap section.' : 'Tidak ada instruksi khusus tambahan.';
+      const drillingInstruction = formData.drillingMode
+        ? 'INSTRUKSI KERAS — DRILLING MODE: Halaman ini HANYA berisi soal latihan. DILARANG TOTAL ada blok materi atau teori. Gunakan layout 2-kolom untuk soal PG. Susun soal sepadat mungkin. '
+        : '';
+      const optionalInstructions = formData.pesanKhusus
+        ? `${drillingInstruction}User meminta: "${formData.pesanKhusus}". Wajib integrasikan permintaan ini ke dalam tema konten dan visual_prompt.`
+        : (drillingInstruction || 'Tidak ada instruksi khusus tambahan.');
       
       let pageContext = "";
       if (isGuru) {
@@ -1336,6 +1353,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
         ${outlineText}
         
         Gaya Visual: ${formData.visual}
+        Mode Konten: ${formData.drillingMode ? 'DRILLING_MODE: true — Terapkan BAGIAN 3B secara penuh. ZERO materi teori. Layout 2 kolom. Kepadatan soal maksimal.' : `Rasio Materi:Latihan: ${formData.rasio}`}
         Tema Karakter: ${formData.karakter}
         Mode: ${formData.mode}
         Bilingual: ${formData.bilingual ? 'Ya' : 'Tidak'}
@@ -2101,23 +2119,48 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
                               className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 rounded-xl px-4 py-2.5 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none text-center" 
                             />
                           </div>
-                          <div className="flex flex-col gap-1.5 col-span-8">
-                            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Rasio Materi : Latihan</label>
-                            <input 
-                              list="rasio-options"
-                              autoComplete="off"
-                              name="rasio" 
-                              value={formData.rasio} 
-                              onChange={handleChange} 
-                              placeholder="Ketik manual atau pilih"
-                              className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 rounded-xl px-4 py-2.5 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none"
+                          {!formData.drillingMode && (
+                            <div className="flex flex-col gap-1.5 col-span-8">
+                              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Rasio Materi : Latihan</label>
+                              <input 
+                                list="rasio-options"
+                                autoComplete="off"
+                                name="rasio" 
+                                value={formData.rasio} 
+                                onChange={handleChange} 
+                                placeholder="Ketik manual atau pilih"
+                                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 rounded-xl px-4 py-2.5 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none"
+                              />
+                              <datalist id="rasio-options">
+                                <option value="30:70 (Banyak Latihan)"></option>
+                                <option value="50:50 (Seimbang)"></option>
+                                <option value="20:80 (Fokus Latihan)"></option>
+                              </datalist>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="col-span-12 mt-1">
+                          <label className={`flex items-center gap-3 p-3.5 border-2 rounded-xl cursor-pointer transition-all ${formData.drillingMode ? 'border-orange-400 bg-orange-50 dark:bg-orange-900/20' : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
+                            <input
+                              type="checkbox"
+                              name="drillingMode"
+                              checked={formData.drillingMode}
+                              onChange={handleChange}
+                              className="w-5 h-5 accent-orange-500 rounded"
                             />
-                            <datalist id="rasio-options">
-                              <option value="30:70 (Banyak Latihan)"></option>
-                              <option value="50:50 (Seimbang)"></option>
-                              <option value="20:80 (Fokus Latihan)"></option>
-                            </datalist>
-                          </div>
+                            <div className="flex flex-col">
+                              <span className={`text-sm font-bold ${formData.drillingMode ? 'text-orange-700 dark:text-orange-400' : 'text-slate-700 dark:text-slate-200'}`}>
+                                ⚡ Mode Drilling (Full Soal)
+                              </span>
+                              <span className="text-xs text-slate-500 dark:text-slate-400">
+                                Halaman diisi penuh soal latihan, tanpa blok materi teori.
+                              </span>
+                            </div>
+                            {formData.drillingMode && (
+                              <span className="ml-auto text-[10px] font-bold px-2 py-1 bg-orange-500 text-white rounded-full flex-shrink-0">AKTIF</span>
+                            )}
+                          </label>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
