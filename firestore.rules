@@ -98,12 +98,9 @@ service cloud.firestore {
       // Allow users to find their skeleton document (invited by agency) by email query
       // Allow agencies to query their own team (by agencyId) OR search someone by email
       allow list: if isAdmin() 
-        || (isSignedIn() && request.query.filters.size() == 1 
-            && request.query.filters[0].fieldPath == 'agencyId'
-            && request.query.filters[0].value == request.auth.uid)
-        || (isSignedIn() && request.query.filters.size() == 1
-            && request.query.filters[0].fieldPath == 'email'
-            && request.query.filters[0].value == request.auth.token.email.lower());
+        || (isSignedIn() && resource.data.agencyId == request.auth.uid)
+        || (isSignedIn() && resource.data.email != null 
+            && resource.data.email.lower() == request.auth.token.email.lower());
       
       // Allow read if owner, admin, assigned agency, or matching email (for skeleton)
       allow read: if isOwner(userId) || isAdmin() || (isSignedIn() && (

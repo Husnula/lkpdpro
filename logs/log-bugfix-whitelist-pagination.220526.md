@@ -30,17 +30,14 @@ Dokumen ini mencatat detail perbaikan bug kritis, pembaruan keamanan, dan penamb
   2. Saat migrasi skeleton dijalankan, status tidak di-hardcode ke `"active"` melainkan menghormati data status bawaan skeleton (`status: skeletonData.status || "active"`).
   3. Menambahkan flag `removedByAgency: true` pada user terdampak sehingga sistem melompati auto-migration berikutnya yang tidak sah.
 
-### BUG #4 — Optimalisasi Firestore Query Rules (`allow list`)
-- **Sebelumnya**: Aturan list pada `/users` memeriksa `resource.data` secara langsung. Ini tidak efisien dan rentan memicu kegagalan query saat dijalankan oleh client SDK.
-- **Perbaikan**: Memisahkan izin query list berdasarkan parameter filter yang aman:
+### BUG #4 — Optimalisasi Firestore Security Rules (`allow list`)
+- **Sebelumnya**: Aturan list pada `/users` memeriksa query filters dengan `request.query.filters` yang ternyata **TIDAK VALID** di standard syntax Firestore Rules. Hal ini menyebabkan error `Missing or insufficient permissions` bagi user dengan role agency saat ingin melihat list atau menambahkan anggota ke tim mereka.
+- **Perbaikan**: Mengganti evaluasi aturan filter list menggunakan evaluasi dokumen (`resource.data`) yang aman dan didukung penuh oleh mesin Firestore Engine:
   ```javascript
   allow list: if isAdmin() 
-    || (isSignedIn() && request.query.filters.size() == 1 
-        && request.query.filters[0].fieldPath == 'agencyId'
-        && request.query.filters[0].value == request.auth.uid)
-    || (isSignedIn() && request.query.filters.size() == 1
-        && request.query.filters[0].fieldPath == 'email'
-        && request.query.filters[0].value == request.auth.token.email.lower());
+    || (isSignedIn() && resource.data.agencyId == request.auth.uid)
+    || (isSignedIn() && resource.data.email != null 
+        && resource.data.email.lower() == request.auth.token.email.lower());
   ```
 
 ### BUG #5 — Sinkronisasi Real-Time Super Admin
