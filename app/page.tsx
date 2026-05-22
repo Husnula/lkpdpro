@@ -251,6 +251,9 @@ function TeamManager({ userProfile }: { userProfile: any }) {
   const [loading, setLoading] = useState(true);
   const [newEmail, setNewEmail] = useState("");
   const [isAdding, setIsAdding] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   // Filter and Pagination states
   const [searchQuery, setSearchQuery] = useState("");
@@ -277,24 +280,26 @@ function TeamManager({ userProfile }: { userProfile: any }) {
 
   const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMsg(null);
+    setSuccessMsg(null);
     if (!newEmail.trim()) return;
 
     // Check quota
     if (userProfile?.licenseStatus === 'capped' && (userProfile?.usageCount || 0) >= (userProfile?.userQuota || 0)) {
-      alert("Kuota tim Anda sudah penuh. Silakan hubungi Admin untuk meningkatkan kuota.");
+      setErrorMsg("Kuota tim Anda sudah penuh. Silakan hubungi Admin untuk meningkatkan kuota.");
       return;
     }
 
     setIsAdding(true);
     try {
       // Find if user already exists
-      const q = query(collection(db, "users"), where("email", "==", newEmail.trim().toLowerCase()));
+      const q = query(collection(db, "users"), where("email", "==", newEmail.trim().toLowerCase()), limit(1));
       const snap = await getDocs(q);
       
       if (!snap.empty) {
         const userDoc = snap.docs[0];
         if (userDoc.data().agencyId) {
-          alert("User ini sudah terdaftar di tim lain.");
+          setErrorMsg("User ini sudah terdaftar di tim lain.");
           return;
         }
         await updateDoc(doc(db, "users", userDoc.id), {
@@ -328,40 +333,37 @@ function TeamManager({ userProfile }: { userProfile: any }) {
 
       setNewEmail("");
       fetchMembers();
-      alert("Berhasil menambahkan anggota tim.");
+      setSuccessMsg("Berhasil menambahkan anggota tim.");
     } catch (err) {
-      alert("Gagal menambahkan anggota: " + (err as Error).message);
+      setErrorMsg("Gagal menambahkan anggota: " + (err as Error).message);
     } finally {
       setIsAdding(false);
     }
   };
 
   const handleRemoveMember = async (memberId: string) => {
-    if (!confirm("Hapus anggota ini dari tim?")) return;
+    setErrorMsg(null);
+    setSuccessMsg(null);
     try {
       const docRef = doc(db, "users", memberId);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         const data = docSnap.data();
         const userEmail = data.email?.toLowerCase();
-        if (!data.uid) {
-          // It is a skeleton doc, delete entirely
-          await deleteDoc(docRef);
-        } else {
-          // Registered user, unlink agency affiliation and reset status to pending and set removedByAgency flag
-          await updateDoc(docRef, {
-            agencyId: null,
-            status: "pending",
-            removedByAgency: true
-          });
+        
+        // Always delete the document entirely from the users collection
+        await deleteDoc(docRef);
 
-          // Delete other skeleton docs with the same email in the collection to prevent migration races
-          if (userEmail) {
-            const q = query(collection(db, "users"), where("email", "==", userEmail));
-            const snap = await getDocs(q);
-            for (const docD of snap.docs) {
-              if (docD.id !== memberId && !docD.data().uid) {
+        // Delete any secondary skeleton docs with the same email in the collection to prevent races
+        if (userEmail) {
+          const q = query(collection(db, "users"), where("email", "==", userEmail), where("agencyId", "==", userProfile.uid), limit(5));
+          const snap = await getDocs(q);
+          for (const docD of snap.docs) {
+            if (docD.id !== memberId) {
+              try {
                 await deleteDoc(doc(db, "users", docD.id));
+              } catch (delErr) {
+                console.warn("Skipping deletion of secondary user (no permission or already deleted):", delErr);
               }
             }
           }
@@ -371,8 +373,11 @@ function TeamManager({ userProfile }: { userProfile: any }) {
         usageCount: increment(-1)
       });
       fetchMembers();
+      setSuccessMsg("Berhasil menghapus anggota dari tim.");
     } catch (e) {
-      alert("Gagal menghapus: " + (e as Error).message);
+      setErrorMsg("Gagal menghapus: " + (e as Error).message);
+    } finally {
+      setConfirmDeleteId(null);
     }
   };
 
@@ -410,6 +415,30 @@ function TeamManager({ userProfile }: { userProfile: any }) {
         <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-1">My Team</h1>
         <p className="text-slate-500">Kelola anggota tim / user Anda ({userProfile?.usageCount || 0} / {userProfile?.licenseStatus === 'unlimited' ? '∞' : (userProfile?.userQuota || 0)} digunakan).</p>
       </div>
+
+      {errorMsg && (
+        <div className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-xl flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 flex-shrink-0" />
+            <p className="text-sm font-medium">{errorMsg}</p>
+          </div>
+          <button onClick={() => setErrorMsg(null)} className="text-red-400 hover:text-red-600">
+            <XCircle className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {successMsg && (
+        <div className="mb-6 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 px-4 py-3 rounded-xl flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <Check className="w-5 h-5 flex-shrink-0 text-emerald-600 dark:text-emerald-400" />
+            <p className="text-sm font-medium">{successMsg}</p>
+          </div>
+          <button onClick={() => setSuccessMsg(null)} className="text-emerald-400 hover:text-emerald-600">
+            <XCircle className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       <form onSubmit={handleAddMember} className="mb-6 bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row gap-4">
         <div className="flex-1">
@@ -498,12 +527,31 @@ function TeamManager({ userProfile }: { userProfile: any }) {
                       {m.lastLogin ? new Date(m.lastLogin.seconds * 1000).toLocaleString('id-ID') : "-"}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button 
-                        onClick={() => handleRemoveMember(m.id)}
-                        className="text-red-600 hover:text-red-700 transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {confirmDeleteId === m.id ? (
+                        <div className="flex items-center justify-end gap-2 animate-in fade-in zoom-in-95 duration-200">
+                          <span className="text-[11px] font-bold text-red-500 animate-pulse">Yakin hapus?</span>
+                          <button 
+                            onClick={() => handleRemoveMember(m.id)}
+                            className="bg-red-600 hover:bg-red-700 text-white px-2.5 py-1 rounded-lg text-xs font-bold transition-all shadow-sm"
+                          >
+                            Ya
+                          </button>
+                          <button 
+                            onClick={() => setConfirmDeleteId(null)}
+                            className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 px-2.5 py-1 rounded-lg text-xs font-bold transition-all border border-slate-200 dark:border-slate-700"
+                          >
+                            Batal
+                          </button>
+                        </div>
+                      ) : (
+                        <button 
+                          onClick={() => setConfirmDeleteId(m.id)}
+                          className="text-slate-400 hover:text-red-600 dark:text-slate-500 dark:hover:text-red-400 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all inline-flex items-center justify-center"
+                          title="Hapus dari tim"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 );
@@ -662,6 +710,9 @@ function AgencyManager({ isDarkMode }: { isDarkMode: boolean }) {
   const sortedAndFilteredUsers = useMemo(() => {
     // 1. Filter
     const filtered = users.filter(u => {
+      // Exclude team members that have agencyId set
+      if (u.agencyId) return false;
+
       const nameMatch = (u.displayName || "").toLowerCase().includes(searchQuery.toLowerCase());
       const emailMatch = (u.email || "").toLowerCase().includes(searchQuery.toLowerCase());
       const matchesSearch = !searchQuery || nameMatch || emailMatch;
@@ -1337,7 +1388,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
             console.log("User profile marks as removed by agency. Skipping migration.");
           } else {
             // Check if there is a pending license/skeleton for this email
-            const q = query(collection(db, "users"), where("email", "==", user.email?.toLowerCase()));
+            const q = query(collection(db, "users"), where("email", "==", user.email?.toLowerCase()), limit(5));
             const querySnap = await getDocs(q);
             
             if (!querySnap.empty) {

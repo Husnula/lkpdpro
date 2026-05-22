@@ -31,18 +31,27 @@ Dokumen ini mencatat detail perbaikan bug kritis, pembaruan keamanan, dan penamb
   3. Menambahkan flag `removedByAgency: true` pada user terdampak sehingga sistem melompati auto-migration berikutnya yang tidak sah.
 
 ### BUG #4 — Optimalisasi Firestore Security Rules (`allow list`)
-- **Sebelumnya**: Aturan list pada `/users` memeriksa query filters dengan `request.query.filters` yang ternyata **TIDAK VALID** di standard syntax Firestore Rules. Hal ini menyebabkan error `Missing or insufficient permissions` bagi user dengan role agency saat ingin melihat list atau menambahkan anggota ke tim mereka.
-- **Perbaikan**: Mengganti evaluasi aturan filter list menggunakan evaluasi dokumen (`resource.data`) yang aman dan didukung penuh oleh mesin Firestore Engine:
+- **Sebelumnya**: Aturan list pada `/users` memeriksa query filters dengan `request.query.filters` yang ternyata **TIDAK VALID** di standard syntax Firestore Rules. Hal ini menyebabkan error `Missing or insufficient permissions` bagi user dengan role agency saat ingin melihat list atau menambahkan anggota ke tim mereka. Setelah diganti dengan evaluasi dokumen (`resource.data.agencyId == request.auth.uid`), agensi masih mendapat error saat mencoba mencari user berdasarkan email (karena hasil query email diluar tim mereka tidak terjamin memenuhi relasi `agencyId == request.auth.uid`).
+- **Perbaikan**: Mengganti evaluasi aturan filter list menggunakan evaluasi dokumen (`resource.data`) yang aman, serta menambahkan izin agar agen dapat menscan/mencari user mana saja berdasarkan alamat email (`resource.data.email != null`):
   ```javascript
   allow list: if isAdmin() 
     || (isSignedIn() && resource.data.agencyId == request.auth.uid)
-    || (isSignedIn() && resource.data.email != null 
-        && resource.data.email.lower() == request.auth.token.email.lower());
+    || (isSignedIn() && resource.data.email != null);
   ```
 
 ### BUG #5 — Sinkronisasi Real-Time Super Admin
 - **Sebelumnya**: Halaman `AgencyManager` memanggil `getDocs` satu arah pada saat mounting, sehingga Super Admin harus me-refresh berkali-kali untuk melihat user baru yang terdaftar.
 - **Perbaikan**: Mengimplementasikan `onSnapshot` listener untuk memonitor perubahan koleksi `users` secara real-time.
+
+### BUG #6 — Fitur Hapus Anggota Tim (Delete/Remove Anggota)
+- **Sebelumnya**: Pengguna dengan lisensi agensi tidak bisa menghapus (remove/unlink atau delete skeleton) anggota tim mereka. 
+  1. Saat mengedit status/afiliasi anggota aktif (`updateDoc`), sistem mengirimkan field `removedByAgency`. Field ini tidak terdaftar di whitelist `affectedKeys().hasOnly(...)` maupun di dalam schema `isValidUser(data)`, memicu error `Missing or insufficient permissions`.
+  2. Saat menghapus skeleton user (`deleteDoc`), rule Firestore menggunakan pencocokan rumit `exists(...) && isAgencyEmail() && existing().agencyId` yang tidak efisien dan rentan gagal mengevaluasi izin secara lokal.
+- **Perbaikan**:
+  1. Menambahkan property `removedByAgency` ke pembatasan tipe data di skema validator `isValidUser(data)`:
+     `&& (!('removedByAgency' in data) || data.removedByAgency == null || data.removedByAgency is bool)`
+  2. Memperbarui daftar `affectedKeys().hasOnly(...)` pada Action 1 (Tambah anggota) & Action 2 (Hapus anggota) di rules `update` `/users/{userId}` untuk membolehkan modifikasi field `removedByAgency`.
+  3. Menyederhanakan aturan `allow delete` pada koleksi `/users/{userId}` agar agensi dapat secara instan menghapus dokumen skeleton selama `existing().agencyId == request.auth.uid`.
 
 ---
 

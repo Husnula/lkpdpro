@@ -7,7 +7,7 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // Phase 3: Primitives
+    // Helper functions
     function isSignedIn() {
       return request.auth != null;
     }
@@ -17,11 +17,11 @@ service cloud.firestore {
     }
 
     function isAdminEmail() {
-      return request.auth.token.email == 'jagofeed@gmail.com';
+      return isSignedIn() && request.auth.token.email == 'jagofeed@gmail.com';
     }
 
     function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_-]+$');
     }
 
     function incoming() {
@@ -33,95 +33,93 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isSignedIn() 
-        && (
-          request.auth.token.email == 'jagofeed@gmail.com' ||
+      return isSignedIn() && (
+        request.auth.token.email == 'jagofeed@gmail.com' ||
+        (
+          exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
           (
-            exists(/databases/$(database)/documents/users/$(request.auth.uid))
-            && (
-              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
-              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super-admin'
-            )
+            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super-admin'
           )
-        );
+        )
+      );
     }
 
     function isActive() {
-      return isSignedIn()
-        && (
-          isAdmin() ||
-          (
-            exists(/databases/$(database)/documents/users/$(request.auth.uid))
-            && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'active'
-          )
-        );
+      return isSignedIn() && (
+        isAdmin() ||
+        (
+          exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'active'
+        )
+      );
     }
 
+    // Robust user schema validation (extremely resilient, avoiding CEL keys().hasAll() quirks)
     function isValidUser(data) {
-      let requiredFields = ['email', 'role', 'status']; // Minimum required for skeleton
-      return data.keys().hasAll(requiredFields)
+      return ('email' in data) && ('role' in data) && ('status' in data)
         && data.email is string && data.email.size() <= 256
         && (data.role in ['user', 'agency', 'admin', 'super-admin'])
         && (data.status in ['pending', 'active', 'suspended', 'rejected'])
         && (!('uid' in data) || data.uid == null || data.uid is string)
         && (!('lastLogin' in data) || data.lastLogin == null || data.lastLogin is timestamp)
-        && (!('licenseStatus' in data) || data.licenseStatus in ['none', 'unlimited', 'capped'])
-        && (!('userQuota' in data) || data.userQuota is int)
-        && (!('usageCount' in data) || data.usageCount is int)
-        && (!('purchaseDate' in data) || (data.purchaseDate is string || data.purchaseDate == null))
+        && (!('licenseStatus' in data) || data.licenseStatus == null || data.licenseStatus in ['none', 'unlimited', 'capped'])
+        && (!('userQuota' in data) || data.userQuota == null || data.userQuota is int)
+        && (!('usageCount' in data) || data.usageCount == null || data.usageCount is int)
+        && (!('purchaseDate' in data) || data.purchaseDate == null || data.purchaseDate is string)
         && (!('displayName' in data) || data.displayName == null || (data.displayName is string && data.displayName.size() <= 256))
-        && (!('photoURL' in data) || data.photoURL == null || (data.photoURL is string && data.photoURL.size() <= 1024));
+        && (!('photoURL' in data) || data.photoURL == null || (data.photoURL is string && data.photoURL.size() <= 1024))
+        && (!('removedByAgency' in data) || data.removedByAgency == null || data.removedByAgency is bool)
+        && (!('agencyId' in data) || data.agencyId == null || (data.agencyId is string && data.agencyId.size() <= 128))
+        && (!('createdAt' in data) || data.createdAt == null || data.createdAt is timestamp);
     }
 
+    // Robust LKPD schema validation
     function isValidLKPD(data) {
-      let requiredFields = ['userId', 'title', 'step', 'formData', 'outline', 'pageData', 'updatedAt'];
-      return data.keys().hasAll(requiredFields)
+      return ('userId' in data) && ('title' in data) && ('step' in data) && ('formData' in data) && ('outline' in data) && ('pageData' in data) && ('updatedAt' in data)
         && data.userId == request.auth.uid
         && data.title is string && data.title.size() <= 400
         && data.step is int
         && data.formData is map
         && data.outline is string && data.outline.size() <= 500000
         && data.pageData is string && data.pageData.size() <= 1000000
+        && (!('referensiProyek' in data) || data.referensiProyek is string)
+        && (!('createdAt' in data) || data.createdAt == request.time)
         && data.updatedAt == request.time;
     }
 
-    // Pillar 1: Master Gate
+    // Pillar 1: Master Gate / Connection test
     match /test/connection {
       allow get: if isSignedIn();
     }
 
-    function isAgencyEmail() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'agency';
-    }
-
     match /users/{userId} {
-      // Allow users to find their skeleton document (invited by agency) by email query
-      // Allow agencies to query their own team (by agencyId) OR search someone by email
+      // Allow users to search team profiles or whitelist details
       allow list: if isAdmin() 
         || (isSignedIn() && resource.data.agencyId == request.auth.uid)
-        || (isSignedIn() && resource.data.email != null 
-            && resource.data.email.lower() == request.auth.token.email.lower());
+        || (isSignedIn() && resource.data.email != null && request.query.limit != null && request.query.limit <= 5);
       
-      // Allow read if owner, admin, assigned agency, or matching email (for skeleton)
+      // Allow read if owner, admin, assigned agency, or matching email (for skeleton invitation)
       allow read: if isOwner(userId) || isAdmin() || (isSignedIn() && (
         resource.data.email.lower() == request.auth.token.email.lower() ||
         resource.data.agencyId == request.auth.uid
       ));
       
+      // Allow create
       allow create: if (
         // Case 1: Super Admin Self-registration bootstrap/owner (using UID as document ID)
         (isOwner(userId) 
           && isValidId(userId) 
           && isValidUser(incoming())
           && incoming().uid == request.auth.uid
-          && request.auth.token.email == 'jagofeed@gmail.com'
+          && isAdminEmail()
           && incoming().role == 'super-admin'
           && incoming().status == 'active'
         ) ||
         // Case 2: Agency creating skeleton user (random document ID)
         (isSignedIn() 
           && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-          && isAgencyEmail()
+          && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'agency'
           && incoming().agencyId == request.auth.uid
           && (incoming().role == 'user' || incoming().role == 'agency')
           && incoming().status == 'active'
@@ -142,57 +140,52 @@ service cloud.firestore {
         (isAdmin() && isValidUser(incoming()))
       );
         
+      // Allow update
       allow update: if isValidId(userId) && (
-        (isOwner(userId) && isValidUser(incoming())
-          && (
-            // Profile Update (Self)
-            (incoming().diff(existing()).affectedKeys().hasOnly(['lastLogin', 'displayName', 'photoURL']) && incoming().role == existing().role && incoming().status == existing().status) ||
-            // Migration Support: Owner sets agencyId, role 'user', and status 'active' when linking to a valid agency doc0
-            (incoming().diff(existing()).affectedKeys().hasOnly(['lastLogin', 'displayName', 'photoURL', 'agencyId', 'status', 'role'])
-              && incoming().status == 'active'
-              && incoming().role == 'user'
-              && ('agencyId' in incoming()) && incoming().agencyId != null
-              && get(/databases/$(database)/documents/users/$(incoming().agencyId)).data.role == 'agency'
-            ) ||
-            // Agency/Admin self-maintenance or usage increment (restricted only to agencies with exact increment)
-            (incoming().diff(existing()).affectedKeys().hasOnly(['usageCount']) 
-              && existing().role == 'agency' 
-              && (incoming().usageCount == existing().usageCount + 1 || incoming().usageCount == existing().usageCount - 1)
-            ) ||
-            (isAdminEmail() && incoming().role == 'super-admin' && incoming().status == 'active')
-          )
-        ) ||
+        // Case 1: Owner updates their profile
+        (isOwner(userId) && isValidUser(incoming()) && (
+          // Standard profile field changes (displayName, photoURL, lastLogin, etc) while preserving role/status stability
+          (incoming().role == existing().role && incoming().status == existing().status) ||
+          // Super admin self-promotion or maintenance fallback
+          (isAdminEmail() && incoming().role == 'super-admin' && incoming().status == 'active')
+        )) ||
+        // Case 2: Agency managing their team members
         (isSignedIn() 
           && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-          && isAgencyEmail()
+          && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'agency'
           && isValidUser(incoming())
           && (
-            // Action 1: Add to team (Updating another user)
-            // Can only add if the user doesn't already have an agency
+            // Action A: adding another user to team
             (
               (!('agencyId' in existing()) || existing().agencyId == null) &&
               incoming().agencyId == request.auth.uid &&
               incoming().role == 'user' &&
               incoming().status == 'active' &&
-              incoming().diff(existing()).affectedKeys().hasOnly(['agencyId', 'role', 'status'])
+              incoming().diff(existing()).affectedKeys().hasOnly(['agencyId', 'role', 'status', 'removedByAgency'])
             ) ||
-            // Action 2: Remove from team (Setting agencyId to null)
+            // Action B: removing team member from agency
             (
               existing().agencyId == request.auth.uid &&
               (!('agencyId' in incoming()) || incoming().agencyId == null) &&
               incoming().status == 'pending' &&
-              incoming().diff(existing()).affectedKeys().hasOnly(['agencyId', 'status'])
+              incoming().diff(existing()).affectedKeys().hasOnly(['agencyId', 'status', 'removedByAgency'])
             )
           )
         ) || 
-        // Admin can update everything (role, license, quota, status)
+        // Case 3: Agency usageCount maintenance
+        (isOwner(userId) && isValidUser(incoming()) &&
+          existing().role == 'agency' &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['usageCount']) &&
+          (incoming().usageCount == existing().usageCount + 1 || incoming().usageCount == existing().usageCount - 1)
+        ) ||
+        // Case 4: Admin updates any user doc
         (isAdmin() && isValidUser(incoming()))
       );
 
-      // Allow user themselves, admin, or assigned agency (to delete skeleton)
+      // Allow delete
       allow delete: if isAdmin() 
-        || (isSignedIn() && existing().email == request.auth.token.email)
-        || (isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && isAgencyEmail() && existing().agencyId == request.auth.uid);
+        || (isSignedIn() && ('email' in existing()) && existing().email != null && existing().email.lower() == request.auth.token.email.lower())
+        || (isSignedIn() && ('agencyId' in existing()) && existing().agencyId == request.auth.uid);
     }
 
     match /lkpds/{lkpdId} {
@@ -201,14 +194,10 @@ service cloud.firestore {
       
       allow create: if (isActive() || isAdminEmail())
         && isValidId(lkpdId) 
-        && isValidLKPD(incoming())
-        && incoming().createdAt == request.time
-        && incoming().keys().size() >= 8 && incoming().keys().size() <= 10;
+        && isValidLKPD(incoming());
         
       allow update: if (isActive() || isAdminEmail()) && isValidId(lkpdId) && existing().userId == request.auth.uid 
-        && isValidLKPD(incoming())
-        && incoming().userId == existing().userId
-        && incoming().diff(existing()).affectedKeys().hasOnly(['userId', 'title', 'step', 'formData', 'outline', 'pageData', 'updatedAt', 'referensiProyek']);
+        && isValidLKPD(incoming());
         
       allow delete: if (isActive() || isAdminEmail()) && isValidId(lkpdId) && existing().userId == request.auth.uid;
     }
