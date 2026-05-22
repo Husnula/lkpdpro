@@ -20,7 +20,7 @@ import Link from 'next/link';
 import { db, handleFirestoreError, OperationType } from '@/lib/firebase';
 import { 
   doc, getDoc, setDoc, collection, query, where, getDocs, 
-  addDoc, updateDoc, deleteDoc, serverTimestamp, orderBy, increment 
+  addDoc, updateDoc, deleteDoc, serverTimestamp, orderBy, increment, deleteField, onSnapshot, limit
 } from 'firebase/firestore';
 
 
@@ -252,6 +252,12 @@ function TeamManager({ userProfile }: { userProfile: any }) {
   const [newEmail, setNewEmail] = useState("");
   const [isAdding, setIsAdding] = useState(false);
 
+  // Filter and Pagination states
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 10;
+
   const fetchMembers = async () => {
     setLoading(true);
     try {
@@ -294,7 +300,8 @@ function TeamManager({ userProfile }: { userProfile: any }) {
         await updateDoc(doc(db, "users", userDoc.id), {
           agencyId: userProfile.uid,
           role: "user",
-          status: "active"
+          status: "active",
+          removedByAgency: deleteField() // remove flag if previously removed from agency
         });
       } else {
         // Create skeleton user
@@ -336,15 +343,28 @@ function TeamManager({ userProfile }: { userProfile: any }) {
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         const data = docSnap.data();
+        const userEmail = data.email?.toLowerCase();
         if (!data.uid) {
           // It is a skeleton doc, delete entirely
           await deleteDoc(docRef);
         } else {
-          // Registered user, unlink agency affiliation and reset status to pending
+          // Registered user, unlink agency affiliation and reset status to pending and set removedByAgency flag
           await updateDoc(docRef, {
             agencyId: null,
-            status: "pending"
+            status: "pending",
+            removedByAgency: true
           });
+
+          // Delete other skeleton docs with the same email in the collection to prevent migration races
+          if (userEmail) {
+            const q = query(collection(db, "users"), where("email", "==", userEmail));
+            const snap = await getDocs(q);
+            for (const docD of snap.docs) {
+              if (docD.id !== memberId && !docD.data().uid) {
+                await deleteDoc(doc(db, "users", docD.id));
+              }
+            }
+          }
         }
       }
       await updateDoc(doc(db, "users", userProfile.uid), {
@@ -356,6 +376,34 @@ function TeamManager({ userProfile }: { userProfile: any }) {
     }
   };
 
+  // Client-side filtering & sorting
+  const filteredMembers = useMemo(() => {
+    return members.filter(m => {
+      const emailMatch = (m.email || "").toLowerCase().includes(searchQuery.toLowerCase());
+      const nameMatch = (m.displayName || "").toLowerCase().includes(searchQuery.toLowerCase());
+      const searchMatch = !searchQuery || emailMatch || nameMatch;
+
+      const activeVal = m.status === 'active' && m.uid != null;
+      const statusText = activeVal ? "active" : "invited";
+      const statusMatch = !filterStatus || statusText === filterStatus;
+
+      return searchMatch && statusMatch;
+    });
+  }, [members, searchQuery, filterStatus]);
+
+  const totalPages = Math.ceil(filteredMembers.length / PAGE_SIZE) || 1;
+  const paginatedMembers = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filteredMembers.slice(start, start + PAGE_SIZE);
+  }, [filteredMembers, currentPage]);
+
+  // Adjust page number if filtered members count shrinks
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [totalPages, currentPage]);
+
   return (
     <div className="max-w-4xl mx-auto p-4 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="mb-8">
@@ -363,7 +411,7 @@ function TeamManager({ userProfile }: { userProfile: any }) {
         <p className="text-slate-500">Kelola anggota tim / user Anda ({userProfile?.usageCount || 0} / {userProfile?.licenseStatus === 'unlimited' ? '∞' : (userProfile?.userQuota || 0)} digunakan).</p>
       </div>
 
-      <form onSubmit={handleAddMember} className="mb-8 bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm flex gap-4">
+      <form onSubmit={handleAddMember} className="mb-6 bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row gap-4">
         <div className="flex-1">
           <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Email Anggota Baru</label>
           <input 
@@ -371,7 +419,7 @@ function TeamManager({ userProfile }: { userProfile: any }) {
             placeholder="email@contoh.com"
             value={newEmail}
             onChange={(e) => setNewEmail(e.target.value)}
-            className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:ring-2 ring-blue-500/20"
+            className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:ring-2 ring-blue-500/20 text-sm"
             required
           />
         </div>
@@ -379,12 +427,35 @@ function TeamManager({ userProfile }: { userProfile: any }) {
           <button 
             type="submit"
             disabled={isAdding}
-            className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all disabled:opacity-50"
+            className="w-full sm:w-auto bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all disabled:opacity-50 text-sm"
           >
-            {isAdding ? <RefreshCw className="w-5 h-5 animate-spin" /> : "Tambah Anggota"}
+            {isAdding ? <RefreshCw className="w-5 h-5 animate-spin mx-auto" /> : "Tambah Anggota"}
           </button>
         </div>
       </form>
+
+      {/* Filter Bar */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-4 p-4 bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800 rounded-2xl">
+        <div className="flex-1 relative">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input 
+            type="text"
+            placeholder="Cari berdasarkan nama / email..." 
+            value={searchQuery}
+            onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+            className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-xl text-sm outline-none focus:ring-2 ring-blue-500/10 placeholder:text-slate-400"
+          />
+        </div>
+        <select 
+          value={filterStatus}
+          onChange={(e) => { setFilterStatus(e.target.value); setCurrentPage(1); }}
+          className="bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-xl px-4 py-2 text-sm outline-none font-medium text-slate-600 dark:text-slate-300"
+        >
+          <option value="">Semua Status</option>
+          <option value="active">Active</option>
+          <option value="invited">Invited</option>
+        </select>
+      </div>
 
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
@@ -398,39 +469,76 @@ function TeamManager({ userProfile }: { userProfile: any }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {members.length === 0 ? (
+              {loading ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-8 text-center text-slate-400 italic">Belum ada anggota tim.</td>
+                  <td colSpan={4} className="px-6 py-8 text-center text-slate-400 italic">Memuat data tim...</td>
                 </tr>
-              ) : members.map((m) => (
-                <tr key={m.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="flex flex-col">
-                      <span className="font-bold text-slate-800 dark:text-white">{m.displayName || "Menunggu..."}</span>
-                      <span className="text-xs text-slate-400">{m.email}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${m.displayName ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}`}>
-                      {m.displayName ? 'Active' : 'Invited'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-xs font-mono text-slate-400">
-                    {m.lastLogin ? new Date(m.lastLogin.seconds * 1000).toLocaleDateString() : "-"}
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <button 
-                      onClick={() => handleRemoveMember(m.id)}
-                      className="text-red-600 hover:text-red-700 transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </td>
+              ) : paginatedMembers.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="px-6 py-8 text-center text-slate-400 italic">Tidak ada anggota yang cocok.</td>
                 </tr>
-              ))}
+              ) : paginatedMembers.map((m) => {
+                const isActiveMember = m.status === 'active' && m.uid != null;
+                return (
+                  <tr key={m.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col">
+                        <span className="font-bold text-slate-800 dark:text-white">{m.displayName || "Menunggu..."}</span>
+                        <span className="text-xs text-slate-400">{m.email}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                        isActiveMember ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400' : 'bg-amber-100 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400'
+                      }`}>
+                        {isActiveMember ? 'Active' : 'Invited'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-xs font-mono text-slate-400">
+                      {m.lastLogin ? new Date(m.lastLogin.seconds * 1000).toLocaleString('id-ID') : "-"}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <button 
+                        onClick={() => handleRemoveMember(m.id)}
+                        className="text-red-600 hover:text-red-700 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
+
+        {/* Pagination bar */}
+        {filteredMembers.length > PAGE_SIZE && (
+          <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-800 px-6 py-4 bg-slate-50/50 dark:bg-slate-900/20">
+            <span className="text-xs text-slate-500">
+              Menampilkan {paginatedMembers.length} dari {filteredMembers.length} anggota
+            </span>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 transition-colors"
+              >
+                Sebelumnya
+              </button>
+              <span className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-300">
+                {currentPage} / {totalPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 transition-colors"
+              >
+                Berikutnya
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -443,21 +551,40 @@ function AgencyManager({ isDarkMode }: { isDarkMode: boolean }) {
   const [editingUser, setEditingUser] = useState<any>(null);
   const [isSavingLocal, setIsSavingLocal] = useState(false);
 
-  const fetchUsers = async () => {
-    setLoading(true);
-    try {
-      const q = query(collection(db, "users"), orderBy("lastLogin", "desc"));
-      const snap = await getDocs(q);
-      setUsers(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    } catch (e) {
-      console.error("Failed to fetch users", e);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Active Expand state for Whitetlist Form
+  const [showWhitelistForm, setShowWhitelistForm] = useState(false);
+  const [whitelistEmail, setWhitelistEmail] = useState("");
+  const [whitelistRole, setWhitelistRole] = useState("agency");
+  const [whitelistLicense, setWhitelistLicense] = useState("capped");
+  const [whitelistQuota, setWhitelistQuota] = useState("10");
+  const [isAddingWhitelist, setIsAddingWhitelist] = useState(false);
 
+  // Filters state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterRole, setFilterRole] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+  const [filterLicense, setFilterLicense] = useState("");
+
+  // Sort state
+  const [sortField, setSortField] = useState("lastLogin");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 10;
+
+  // Real-time synchronization
   useEffect(() => {
-    fetchUsers();
+    setLoading(true);
+    const q = query(collection(db, "users"));
+    const unsubscribe = onSnapshot(q, (snap) => {
+      setUsers(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setLoading(false);
+    }, (error) => {
+      console.error("Real-time updates failed for users collection:", error);
+      setLoading(false);
+    });
+    return () => unsubscribe();
   }, []);
 
   const handleUpdateUser = async (userId: string, updates: any) => {
@@ -470,7 +597,6 @@ function AgencyManager({ isDarkMode }: { isDarkMode: boolean }) {
     try {
       await updateDoc(doc(db, "users", userId), updates);
       console.log(`[AgencyManager] Update successful for ${userId}`);
-      await fetchUsers();
       setEditingUser(null);
     } catch (e) {
       console.error(`[AgencyManager] Update failed for ${userId}`, e);
@@ -480,37 +606,285 @@ function AgencyManager({ isDarkMode }: { isDarkMode: boolean }) {
     }
   };
 
+  const handleAddWhitelist = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!whitelistEmail.trim()) return;
+
+    setIsAddingWhitelist(true);
+    try {
+      const q = query(collection(db, "users"), where("email", "==", whitelistEmail.trim().toLowerCase()));
+      const snap = await getDocs(q);
+      
+      if (!snap.empty) {
+        alert("Email ini sudah terdaftar di sistem.");
+        return;
+      }
+
+      const isCapped = whitelistLicense === 'capped';
+      const isUnlimited = whitelistLicense === 'unlimited';
+
+      // Create a skeleton with random ID
+      await addDoc(collection(db, "users"), {
+        uid: null,
+        email: whitelistEmail.trim().toLowerCase(),
+        role: whitelistRole,
+        status: "active", // Active from start as it's directly whitelist/invited by admin
+        licenseStatus: whitelistLicense,
+        userQuota: isCapped ? Number(whitelistQuota) : (isUnlimited ? 999999 : 0),
+        usageCount: 0,
+        purchaseDate: new Date().toISOString().split('T')[0],
+        displayName: "",
+        photoURL: "",
+        createdAt: serverTimestamp(),
+        lastLogin: null
+      });
+
+      alert("Berhasil melakukan Whitelist email baru ke dalam sistem.");
+      setWhitelistEmail("");
+      setShowWhitelistForm(false);
+    } catch (err) {
+      alert("Gagal Whitelist email: " + (err as Error).message);
+    } finally {
+      setIsAddingWhitelist(false);
+    }
+  };
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(prev => prev === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("desc");
+    }
+  };
+
+  // Filter & Sort computation
+  const sortedAndFilteredUsers = useMemo(() => {
+    // 1. Filter
+    const filtered = users.filter(u => {
+      const nameMatch = (u.displayName || "").toLowerCase().includes(searchQuery.toLowerCase());
+      const emailMatch = (u.email || "").toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch = !searchQuery || nameMatch || emailMatch;
+
+      const matchesRole = !filterRole || u.role === filterRole;
+      const matchesStatus = !filterStatus || u.status === filterStatus;
+      const matchesLicense = !filterLicense || u.licenseStatus === filterLicense;
+
+      return matchesSearch && matchesRole && matchesStatus && matchesLicense;
+    });
+
+    // 2. Sort
+    return [...filtered].sort((a, b) => {
+      let valA = a[sortField];
+      let valB = b[sortField];
+
+      // Handle Timestamp conversion
+      if (valA && typeof valA === "object" && "seconds" in valA) {
+        valA = valA.seconds;
+      }
+      if (valB && typeof valB === "object" && "seconds" in valB) {
+        valB = valB.seconds;
+      }
+
+      if (valA == null) return sortDirection === "asc" ? -1 : 1;
+      if (valB == null) return sortDirection === "asc" ? 1 : -1;
+
+      if (typeof valA === "string") {
+        return sortDirection === "asc" 
+          ? valA.localeCompare(valB) 
+          : valB.localeCompare(valA);
+      }
+
+      return sortDirection === "asc" 
+        ? (valA > valB ? 1 : -1) 
+        : (valB > valA ? 1 : -1);
+    });
+  }, [users, searchQuery, filterRole, filterStatus, filterLicense, sortField, sortDirection]);
+
+  // Pagination compilation
+  const totalPages = Math.ceil(sortedAndFilteredUsers.length / PAGE_SIZE) || 1;
+  const paginatedUsers = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return sortedAndFilteredUsers.slice(start, start + PAGE_SIZE);
+  }, [sortedAndFilteredUsers, currentPage]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [totalPages, currentPage]);
+
+  const renderSortIndicator = (field: string) => {
+    if (sortField !== field) return null;
+    return sortDirection === "asc" ? " ▲" : " ▼";
+  };
+
   return (
     <div className="max-w-6xl mx-auto p-4 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="mb-8 flex justify-between items-center">
+      <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-1">Agency Management</h1>
-          <p className="text-slate-500">Kelola lisensi pembeli dan berikan akses Agency.</p>
+          <p className="text-slate-500">Kelola lisensi pembeli, berikan akses Agency, dan tambah email ke whitelist.</p>
         </div>
-        <button onClick={fetchUsers} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full">
-          <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
-        </button>
+        <div className="flex gap-2">
+          <button 
+            onClick={() => setShowWhitelistForm(!showWhitelistForm)}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 shadow-sm"
+          >
+            <PlusCircle className="w-4 h-4" />
+            {showWhitelistForm ? "Sembunyikan Form Whitelist" : "Whitelist Baru"}
+          </button>
+        </div>
+      </div>
+
+      {/* Whitelist New Email Form */}
+      {showWhitelistForm && (
+        <form onSubmit={handleAddWhitelist} className="mb-6 bg-white dark:bg-slate-900 p-6 rounded-3xl border border-blue-100 dark:border-blue-900 shadow-sm animate-in slide-in-from-top-4 duration-300">
+          <h3 className="text-md font-bold mb-4 text-slate-800 dark:text-white flex items-center gap-2">
+            <PlusCircle className="w-5 h-5 text-blue-600" />
+            Whitelist Email Baru (Manual Skeletons)
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Email Whitelist</label>
+              <input 
+                type="email" 
+                placeholder="email@contoh.com"
+                value={whitelistEmail}
+                onChange={(e) => setWhitelistEmail(e.target.value)}
+                required
+                className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl px-4 py-2.5 outline-none text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Role</label>
+              <select 
+                value={whitelistRole}
+                onChange={(e) => setWhitelistRole(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl px-4 py-2.5 outline-none text-sm"
+              >
+                <option value="user">User (Anggota biasa)</option>
+                <option value="agency">Agency (Halaman Team Anda)</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">License</label>
+              <select 
+                value={whitelistLicense}
+                onChange={(e) => setWhitelistLicense(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl px-4 py-2.5 outline-none text-sm"
+              >
+                <option value="none">Tanpa Lisensi</option>
+                <option value="unlimited">Unlimited (Promo Mei)</option>
+                <option value="capped">Capped (Standard)</option>
+              </select>
+            </div>
+            {whitelistLicense === 'capped' ? (
+              <div>
+                <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Kuota Quota</label>
+                <input 
+                  type="number"
+                  placeholder="10"
+                  value={whitelistQuota}
+                  onChange={(e) => setWhitelistQuota(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl px-4 py-2.5 outline-none text-sm"
+                />
+              </div>
+            ) : <div className="hidden md:block"></div>}
+          </div>
+          <div className="mt-4 flex justify-end gap-3">
+            <button 
+              type="button" 
+              onClick={() => setShowWhitelistForm(false)}
+              className="px-4 py-2.5 text-sm font-semibold border dark:border-slate-700 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            >
+              Batal
+            </button>
+            <button 
+              type="submit" 
+              disabled={isAddingWhitelist}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2"
+            >
+              {isAddingWhitelist ? "Membuat..." : "Simpan ke Whitelist"}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* Filter and Search Bar */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mb-4 p-4 bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800 rounded-3xl">
+        <div className="relative">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input 
+            type="text"
+            placeholder="Cari nama / email..." 
+            value={searchQuery}
+            onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+            className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-xl text-xs outline-none focus:ring-2 ring-blue-500/10 placeholder:text-slate-400"
+          />
+        </div>
+        <select 
+          value={filterRole}
+          onChange={(e) => { setFilterRole(e.target.value); setCurrentPage(1); }}
+          className="bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-xl px-3 py-2 text-xs outline-none font-semibold text-slate-600 dark:text-slate-300"
+        >
+          <option value="">Semua Role</option>
+          <option value="user">User</option>
+          <option value="agency">Agency</option>
+          <option value="admin">Admin</option>
+          <option value="super-admin">Super Admin</option>
+        </select>
+        <select 
+          value={filterStatus}
+          onChange={(e) => { setFilterStatus(e.target.value); setCurrentPage(1); }}
+          className="bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-xl px-3 py-2 text-xs outline-none font-semibold text-slate-600 dark:text-slate-300"
+        >
+          <option value="">Semua Status</option>
+          <option value="active">Active</option>
+          <option value="pending">Pending</option>
+          <option value="suspended">Suspended</option>
+        </select>
+        <select 
+          value={filterLicense}
+          onChange={(e) => { setFilterLicense(e.target.value); setCurrentPage(1); }}
+          className="bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-xl px-3 py-2 text-xs outline-none font-semibold text-slate-600 dark:text-slate-300"
+        >
+          <option value="">Semua Lisensi</option>
+          <option value="none">Tanpa Lisensi</option>
+          <option value="capped">Capped</option>
+          <option value="unlimited">Unlimited</option>
+        </select>
       </div>
 
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 uppercase text-[10px] font-bold tracking-widest">
+            <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 uppercase text-[10px] font-bold tracking-widest cursor-pointer select-none">
               <tr>
-                <th className="px-6 py-4">User</th>
-                <th className="px-6 py-4">Role</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4">License</th>
-                <th className="px-6 py-4">Quota</th>
-                <th className="px-6 py-4">Aksi</th>
+                <th className="px-6 py-4" onClick={() => handleSort("displayName")}>User {renderSortIndicator("displayName")}</th>
+                <th className="px-6 py-4" onClick={() => handleSort("role")}>Role {renderSortIndicator("role")}</th>
+                <th className="px-6 py-4" onClick={() => handleSort("status")}>Status {renderSortIndicator("status")}</th>
+                <th className="px-6 py-4" onClick={() => handleSort("licenseStatus")}>License {renderSortIndicator("licenseStatus")}</th>
+                <th className="px-6 py-4" onClick={() => handleSort("usageCount")}>Quota {renderSortIndicator("usageCount")}</th>
+                <th className="px-6 py-4" onClick={() => handleSort("lastLogin")}>Terakhir Login {renderSortIndicator("lastLogin")}</th>
+                <th className="px-6 py-4 text-right">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {users.map((u) => (
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-8 text-center text-slate-400 italic">Memuat seluruh data user secara real-time...</td>
+                </tr>
+              ) : paginatedUsers.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-8 text-center text-slate-400 italic">Tidak ada user yang cocok dengan kriteria.</td>
+                </tr>
+              ) : paginatedUsers.map((u) => (
                 <tr key={u.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex flex-col">
-                      <span className="font-bold text-slate-800 dark:text-white">{u.displayName || u.email}</span>
+                      <span className="font-bold text-slate-800 dark:text-white">{u.displayName || "Menunggu..."}</span>
                       <span className="text-xs text-slate-400">{u.email}</span>
                     </div>
                   </td>
@@ -519,7 +893,7 @@ function AgencyManager({ isDarkMode }: { isDarkMode: boolean }) {
                       value={u.role || "user"}
                       disabled={u.email === 'jagofeed@gmail.com'}
                       onChange={(e) => handleUpdateUser(u.id, { role: e.target.value })}
-                      className="bg-transparent font-medium text-blue-600 dark:text-blue-400 outline-none cursor-pointer"
+                      className="bg-transparent font-medium text-blue-600 dark:text-blue-400 outline-none cursor-pointer text-xs"
                     >
                       <option value="user">User</option>
                       <option value="agency">Agency</option>
@@ -530,11 +904,12 @@ function AgencyManager({ isDarkMode }: { isDarkMode: boolean }) {
                   <td className="px-6 py-4">
                     <select 
                       value={u.status || "pending"}
+                      disabled={u.email === 'jagofeed@gmail.com'}
                       onChange={(e) => handleUpdateUser(u.id, { status: e.target.value })}
                       className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase border cursor-pointer ${
-                        u.status === 'active' ? 'bg-emerald-50 border-emerald-100 text-emerald-600 dark:bg-emerald-900/20 dark:border-emerald-800' : 
-                        u.status === 'suspended' ? 'bg-red-50 border-red-100 text-red-600 dark:bg-red-900/20 dark:border-red-800' : 
-                        'bg-amber-50 border-amber-100 text-amber-600 dark:bg-amber-900/20 dark:border-amber-800'
+                        u.status === 'active' ? 'bg-emerald-50 border-emerald-100 text-emerald-600 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-400' : 
+                        u.status === 'suspended' ? 'bg-red-50 border-red-100 text-red-600 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400' : 
+                        'bg-amber-50 border-amber-100 text-amber-600 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-400'
                       }`}
                     >
                       <option value="active">Active</option>
@@ -544,15 +919,18 @@ function AgencyManager({ isDarkMode }: { isDarkMode: boolean }) {
                   </td>
                   <td className="px-6 py-4">
                     <span className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase ${
-                      u.licenseStatus === 'unlimited' ? 'bg-purple-100 text-purple-600 dark:bg-purple-900/30' : 
-                      u.licenseStatus === 'capped' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30' : 
+                      u.licenseStatus === 'unlimited' ? 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400' : 
+                      u.licenseStatus === 'capped' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' : 
                       'bg-slate-100 text-slate-400 dark:bg-slate-800'
                     }`}>
                       {u.licenseStatus || 'none'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 font-mono text-xs">
+                  <td className="px-6 py-4 font-mono text-xs text-slate-500 dark:text-slate-400">
                     {u.usageCount || 0} / {u.licenseStatus === 'unlimited' ? '∞' : (u.userQuota || 0)}
+                  </td>
+                  <td className="px-6 py-4 text-xs font-mono text-slate-400">
+                    {u.lastLogin ? new Date(u.lastLogin.seconds * 1000).toLocaleString('id-ID') : "-"}
                   </td>
                   <td className="px-6 py-4">
                     <button 
@@ -567,6 +945,34 @@ function AgencyManager({ isDarkMode }: { isDarkMode: boolean }) {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination controls */}
+        {sortedAndFilteredUsers.length > PAGE_SIZE && (
+          <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-800 px-6 py-4 bg-slate-50/50 dark:bg-slate-900/10">
+            <span className="text-xs text-slate-500">
+              Menampilkan {paginatedUsers.length} dari {sortedAndFilteredUsers.length} user
+            </span>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 transition-colors"
+              >
+                Sebelumnya
+              </button>
+              <span className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-300">
+                {currentPage} / {totalPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 transition-colors"
+              >
+                Berikutnya
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {editingUser && (
@@ -579,7 +985,7 @@ function AgencyManager({ isDarkMode }: { isDarkMode: boolean }) {
               <div>
                 <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Tipe Lisensi</label>
                 <select 
-                  className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl px-4 py-2"
+                  className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl px-4 py-2 text-sm"
                   value={editingUser.licenseStatus || "none"}
                   onChange={(e) => setEditingUser({...editingUser, licenseStatus: e.target.value})}
                 >
@@ -594,7 +1000,7 @@ function AgencyManager({ isDarkMode }: { isDarkMode: boolean }) {
                   <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Kuota User/Proyek</label>
                   <input 
                     type="number"
-                    className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl px-4 py-2"
+                    className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl px-4 py-2 text-sm"
                     value={editingUser.userQuota || 100}
                     onChange={(e) => setEditingUser({...editingUser, userQuota: parseInt(e.target.value)})}
                   />
@@ -605,7 +1011,7 @@ function AgencyManager({ isDarkMode }: { isDarkMode: boolean }) {
                 <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Tgl Pembelian</label>
                 <input 
                   type="date"
-                  className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl px-4 py-2"
+                  className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl px-4 py-2 text-sm"
                   value={editingUser.purchaseDate ? editingUser.purchaseDate.split('T')[0] : ""}
                   onChange={(e) => setEditingUser({...editingUser, purchaseDate: e.target.value})}
                 />
@@ -616,7 +1022,7 @@ function AgencyManager({ isDarkMode }: { isDarkMode: boolean }) {
               <button 
                 onClick={() => setEditingUser(null)}
                 disabled={isSavingLocal}
-                className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold transition-all disabled:opacity-50"
+                className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold transition-all disabled:opacity-50 text-sm"
               >
                 Batal
               </button>
@@ -631,7 +1037,7 @@ function AgencyManager({ isDarkMode }: { isDarkMode: boolean }) {
                   });
                 }}
                 disabled={isSavingLocal}
-                className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-sm"
               >
                 {isSavingLocal ? <RefreshCw className="w-4 h-4 animate-spin" /> : "Simpan"}
               </button>
@@ -781,7 +1187,8 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
       const q = query(
         collection(db, "lkpds"), 
         where("userId", "==", user.uid),
-        orderBy("updatedAt", "desc")
+        orderBy("updatedAt", "desc"),
+        limit(50)
       );
       const querySnapshot = await getDocs(q);
       const projectList = querySnapshot.docs.map(doc => ({
@@ -925,33 +1332,38 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
           
           let profileToUse = userSnap.exists() ? userSnap.data() : null;
 
-          // Check if there is a pending license/skeleton for this email
-          const q = query(collection(db, "users"), where("email", "==", user.email?.toLowerCase()));
-          const querySnap = await getDocs(q);
-          
-          if (!querySnap.empty) {
-            // Find doc that is NOT the current UID (meaning it's a skeleton with random ID)
-            const skeletonDoc = querySnap.docs.find(doc => doc.id !== user.uid);
+          // Check if user has been removed from agency
+          if (profileToUse?.removedByAgency) {
+            console.log("User profile marks as removed by agency. Skipping migration.");
+          } else {
+            // Check if there is a pending license/skeleton for this email
+            const q = query(collection(db, "users"), where("email", "==", user.email?.toLowerCase()));
+            const querySnap = await getDocs(q);
             
-            if (skeletonDoc) {
-              const skeletonData = skeletonDoc.data();
-              console.log("Found pending license/skeleton doc, migrating...");
-              const mergedUser = {
-                ...(profileToUse || {}),
-                ...skeletonData,
-                uid: user.uid,
-                email: user.email?.toLowerCase(),
-                lastLogin: serverTimestamp(),
-                displayName: user.displayName || profileToUse?.displayName || skeletonData.displayName || "",
-                photoURL: user.photoURL || profileToUse?.photoURL || skeletonData.photoURL || "",
-                status: "active" // Ensure it becomes active once migrated
-              };
+            if (!querySnap.empty) {
+              // Find doc that is NOT the current UID (meaning it's a skeleton with random ID)
+              const skeletonDoc = querySnap.docs.find(doc => doc.id !== user.uid);
               
-              await setDoc(userRef, mergedUser);
-              await deleteDoc(doc(db, "users", skeletonDoc.id));
-              
-              userSnap = await getDoc(userRef); // Refresh
-              profileToUse = userSnap.data();
+              if (skeletonDoc) {
+                const skeletonData = skeletonDoc.data();
+                console.log("Found pending license/skeleton doc, migrating...");
+                const mergedUser = {
+                  ...(profileToUse || {}),
+                  ...skeletonData,
+                  uid: user.uid,
+                  email: user.email?.toLowerCase(),
+                  lastLogin: serverTimestamp(),
+                  displayName: user.displayName || profileToUse?.displayName || skeletonData.displayName || "",
+                  photoURL: user.photoURL || profileToUse?.photoURL || skeletonData.photoURL || "",
+                  status: skeletonData.status || "active" // Ensure we respect status from skeleton, don't hardcode active
+                };
+                
+                await setDoc(userRef, mergedUser);
+                await deleteDoc(doc(db, "users", skeletonDoc.id));
+                
+                userSnap = await getDoc(userRef); // Refresh
+                profileToUse = userSnap.data();
+              }
             }
           }
 
@@ -985,29 +1397,28 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
             setUserRole(data.role || "user");
             setUserStatus(data.status || "active");
           } else {
-            // Create initial user document
-            const isDefaultSuperAdmin = user.email === "jagofeed@gmail.com";
-            const initialRole = isDefaultSuperAdmin ? "super-admin" : "user";
-            const initialStatus = isDefaultSuperAdmin ? "active" : "pending";
-            
-            const newUser = {
-              uid: user.uid,
-              email: user.email,
-              role: initialRole,
-              status: initialStatus,
-              licenseStatus: "none",
-              userQuota: 0,
-              usageCount: 0,
-              purchaseDate: null,
-              lastLogin: serverTimestamp(),
-              displayName: user.displayName || "",
-              photoURL: user.photoURL || ""
-            };
-            
-            await setDoc(doc(db, "users", user.uid), newUser);
-            setUserProfile(newUser);
-            setUserRole(initialRole);
-            setUserStatus(initialStatus);
+            // If user does not exist in Firestore, only allow jagofeed@gmail.com to self-register
+            if (user.email === "jagofeed@gmail.com") {
+              const newUser = {
+                uid: user.uid,
+                email: "jagofeed@gmail.com",
+                role: "super-admin",
+                status: "active",
+                licenseStatus: "unlimited",
+                userQuota: 999999,
+                usageCount: 0,
+                purchaseDate: null,
+                lastLogin: serverTimestamp(),
+                displayName: user.displayName || "Super Admin",
+                photoURL: user.photoURL || ""
+              };
+              await setDoc(doc(db, "users", user.uid), newUser);
+              setUserProfile(newUser);
+              setUserRole("super-admin");
+              setUserStatus("active");
+            } else {
+              setUserStatus("not_invited");
+            }
           }
         } catch (e) {
           console.error("Error checking/creating user profile", e);
@@ -1553,9 +1964,32 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
           </p>
           <button 
             onClick={() => logout()}
-            className="w-full py-3.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold transition-all"
+            className="w-full py-3.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold transition-all animate-pulse"
           >
             Log Out
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Not Invited View (Access Denied for non-whitelist registrations)
+  if (userStatus === "not_invited") {
+    return (
+      <div className={`${isDarkMode ? 'dark' : ''} antialiased h-screen w-full bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4 transition-colors duration-300`}>
+        <div className="max-w-md w-full bg-white dark:bg-slate-900 border border-red-100 dark:border-red-900/30 rounded-3xl p-8 shadow-xl shadow-red-500/5 text-center animate-in fade-in zoom-in-95 duration-300">
+          <div className="w-20 h-20 bg-red-50 dark:bg-red-950/40 rounded-3xl flex items-center justify-center text-red-500 mx-auto mb-6">
+            <ShieldAlert className="w-10 h-10" />
+          </div>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2 font-sans tracking-tight">Akses Ditolak</h1>
+          <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-8">
+            Email <span className="font-bold text-slate-800 dark:text-slate-200">{user?.email}</span> belum terdaftar di whitelist. Silakan hubungi administrator untuk verifikasi.
+          </p>
+          <button 
+            onClick={() => logout()}
+            className="w-full py-3.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-xl font-bold transition-all flex items-center justify-center gap-2"
+          >
+            <LogOut className="w-4 h-4" /> Keluar
           </button>
         </div>
       </div>

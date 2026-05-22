@@ -97,11 +97,13 @@ service cloud.firestore {
     match /users/{userId} {
       // Allow users to find their skeleton document (invited by agency) by email query
       // Allow agencies to query their own team (by agencyId) OR search someone by email
-      allow list: if isAdmin() || (isSignedIn() && (
-        resource.data.email.lower() == request.auth.token.email.lower() ||
-        resource.data.agencyId == request.auth.uid ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && isAgencyEmail())
-      ));
+      allow list: if isAdmin() 
+        || (isSignedIn() && request.query.filters.size() == 1 
+            && request.query.filters[0].fieldPath == 'agencyId'
+            && request.query.filters[0].value == request.auth.uid)
+        || (isSignedIn() && request.query.filters.size() == 1
+            && request.query.filters[0].fieldPath == 'email'
+            && request.query.filters[0].value == request.auth.token.email.lower());
       
       // Allow read if owner, admin, assigned agency, or matching email (for skeleton)
       allow read: if isOwner(userId) || isAdmin() || (isSignedIn() && (
@@ -110,15 +112,14 @@ service cloud.firestore {
       ));
       
       allow create: if (
-        // Case 1: Standard Self-registration (using UID as document ID)
+        // Case 1: Super Admin Self-registration bootstrap/owner (using UID as document ID)
         (isOwner(userId) 
           && isValidId(userId) 
           && isValidUser(incoming())
           && incoming().uid == request.auth.uid
-          && (
-            (isAdminEmail() && incoming().role == 'super-admin' && incoming().status == 'active') ||
-            (!isAdminEmail() && incoming().role == 'user' && incoming().status == 'pending')
-          )
+          && request.auth.token.email == 'jagofeed@gmail.com'
+          && incoming().role == 'super-admin'
+          && incoming().status == 'active'
         ) ||
         // Case 2: Agency creating skeleton user (random document ID)
         (isSignedIn() 
@@ -128,9 +129,20 @@ service cloud.firestore {
           && (incoming().role == 'user' || incoming().role == 'agency')
           && incoming().status == 'active'
           && isValidUser(incoming())
+          && (
+            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.licenseStatus == 'unlimited' ||
+            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.usageCount < get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userQuota
+          )
         ) ||
         // Case 3: User migrating skeleton data to their own UID-based document
-        (isOwner(userId) && isValidUser(incoming()) && incoming().uid == request.auth.uid)
+        (isOwner(userId) 
+          && isValidUser(incoming()) 
+          && incoming().uid == request.auth.uid
+          && incoming().email.lower() == request.auth.token.email.lower()
+          && incoming().status == 'active'
+        ) ||
+        // Case 4: Admin creating any user/skeleton
+        (isAdmin() && isValidUser(incoming()))
       );
         
       allow update: if isValidId(userId) && (
@@ -138,15 +150,18 @@ service cloud.firestore {
           && (
             // Profile Update (Self)
             (incoming().diff(existing()).affectedKeys().hasOnly(['lastLogin', 'displayName', 'photoURL']) && incoming().role == existing().role && incoming().status == existing().status) ||
-            // Migration Support: Owner sets agencyId, role 'user', and status 'active' when linking to a valid agency doc
+            // Migration Support: Owner sets agencyId, role 'user', and status 'active' when linking to a valid agency doc0
             (incoming().diff(existing()).affectedKeys().hasOnly(['lastLogin', 'displayName', 'photoURL', 'agencyId', 'status', 'role'])
               && incoming().status == 'active'
               && incoming().role == 'user'
               && ('agencyId' in incoming()) && incoming().agencyId != null
               && get(/databases/$(database)/documents/users/$(incoming().agencyId)).data.role == 'agency'
             ) ||
-            // Agency/Admin self-maintenance or usage increment
-            (incoming().diff(existing()).affectedKeys().hasOnly(['usageCount'])) ||
+            // Agency/Admin self-maintenance or usage increment (restricted only to agencies with exact increment)
+            (incoming().diff(existing()).affectedKeys().hasOnly(['usageCount']) 
+              && existing().role == 'agency' 
+              && (incoming().usageCount == existing().usageCount + 1 || incoming().usageCount == existing().usageCount - 1)
+            ) ||
             (isAdminEmail() && incoming().role == 'super-admin' && incoming().status == 'active')
           )
         ) ||
@@ -184,7 +199,7 @@ service cloud.firestore {
     }
 
     match /lkpds/{lkpdId} {
-      allow list: if (isActive() || isAdminEmail()) && resource.data.userId == request.auth.uid;
+      allow list: if (isActive() || isAdminEmail()) && resource.data.userId == request.auth.uid && request.query.limit <= 50;
       allow get: if (isActive() || isAdminEmail()) && isValidId(lkpdId) && existing().userId == request.auth.uid;
       
       allow create: if (isActive() || isAdminEmail())
