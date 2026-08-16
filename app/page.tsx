@@ -38,14 +38,15 @@ Output JSON-mu akan dibaca oleh AI Image Generator / Layout Engine untuk menyusu
 
 BAGIAN 1 — STRUKTUR HALAMAN & KONTEN (PENTING)
 1. HALAMAN 1: COVER / IDENTITAS LENGKAP
-Jika membuat JSON untuk Halaman 1, struktur layout harus selalu diawali dengan area "HEADER_IDENTITAS_LENGKAP" sebelum masuk ke materi/latihan. Elemen yang wajib ada:
-- Judul Utama: LKPD [Mata Pelajaran] — [Topik Spesifik]
-- Subjudul: [Fase] / [Kelas]
-- Branding Sekolah: Nama Sekolah, Nama Guru, Tahun Ajaran.
-- Kotak Identitas Siswa: Sediakan field kosong bergaris titik-titik untuk Nama, Kelas, dan Nomor Absen.
-- Tujuan Pembelajaran: 2-3 poin tujuan singkat.
-- Petunjuk Pengerjaan & Alokasi Waktu: Instruksi dasar untuk siswa.
-- Catatan Visual: Berikan elemen dekoratif yang paling mencolok dan maskot karakter utama di halaman ini untuk menarik perhatian siswa.
+Tergantung instruksi, Halaman 1 bisa berupa Cover Penuh ATAU Identitas + Materi.
+JIKA INSTRUKSI MEMINTA HALAMAN COVER PENUH:
+- Fokus pada Tipografi Besar (Judul Utama & Subjudul).
+- Berikan "image_prompt" ilustrasi besar yang mendominasi sebagai hero image.
+- Sediakan Kotak Identitas Siswa (Nama, Kelas, No Absen).
+- JANGAN masukkan materi atau latihan di halaman ini.
+JIKA BUKAN COVER PENUH (STANDAR):
+- Gunakan area "HEADER_IDENTITAS_LENGKAP" di atas, lalu masuk ke materi/latihan.
+- Elemen wajib: Judul, Subjudul, Branding Sekolah, Kotak Identitas, Tujuan Pembelajaran, Petunjuk.
 
 2. HALAMAN 2 DST: KONTEN LEMBAR SISWA (LATIHAN/MATERI)
 Ini adalah halaman kerja murni untuk siswa.
@@ -86,6 +87,12 @@ Jika parameter "drilling_mode" bernilai true, terapkan seluruh aturan berikut:
 6. FIELD JAWABAN COMPACT: Untuk isian, gunakan garis pendek (________), bukan kotak besar.
 7. ILUSTRASI MINIMAL: Gambar hanya jika menjadi bagian integral soal (stimulus). Dilarang ilustrasi dekoratif.
 8. RASIO OVERRIDE: Parameter "rasio" diabaikan sepenuhnya saat drilling_mode aktif.
+
+BAGIAN 3C — MODE MATERI SAJA (AKTIF JIKA PARAMETER materi_saja_mode: true)
+Jika parameter "materi_saja_mode" bernilai true, terapkan seluruh aturan berikut:
+1. ZERO SOAL: Dilarang keras menyertakan pertanyaan, soal latihan, atau rubrik evaluasi.
+2. FOKUS KONTEN: Pecah materi menjadi bagian-bagian yang mudah dicerna (bite-sized), gunakan bullet points, tabel ringkasan, atau callout boxes (Kotak "Ingat Ini!").
+3. VISUALISASI: Gunakan peta konsep (mind map) atau infografis jika memungkinkan.
 
 BAGIAN 4 — ATURAN SAFE AREA & PRINT MARGIN (SANGAT PENTING UNTUK CETAK)
 Halaman LKPD ini akan dicetak fisik. Pastikan instruksi ini selalu diterapkan pada objek JSON:
@@ -251,9 +258,6 @@ function TeamManager({ userProfile }: { userProfile: any }) {
   const [loading, setLoading] = useState(true);
   const [newEmail, setNewEmail] = useState("");
   const [isAdding, setIsAdding] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   // Filter and Pagination states
   const [searchQuery, setSearchQuery] = useState("");
@@ -280,26 +284,24 @@ function TeamManager({ userProfile }: { userProfile: any }) {
 
   const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMsg(null);
-    setSuccessMsg(null);
     if (!newEmail.trim()) return;
 
     // Check quota
     if (userProfile?.licenseStatus === 'capped' && (userProfile?.usageCount || 0) >= (userProfile?.userQuota || 0)) {
-      setErrorMsg("Kuota tim Anda sudah penuh. Silakan hubungi Admin untuk meningkatkan kuota.");
+      alert("Kuota tim Anda sudah penuh. Silakan hubungi Admin untuk meningkatkan kuota.");
       return;
     }
 
     setIsAdding(true);
     try {
       // Find if user already exists
-      const q = query(collection(db, "users"), where("email", "==", newEmail.trim().toLowerCase()), limit(1));
+      const q = query(collection(db, "users"), where("email", "==", newEmail.trim().toLowerCase()));
       const snap = await getDocs(q);
       
       if (!snap.empty) {
         const userDoc = snap.docs[0];
         if (userDoc.data().agencyId) {
-          setErrorMsg("User ini sudah terdaftar di tim lain.");
+          alert("User ini sudah terdaftar di tim lain.");
           return;
         }
         await updateDoc(doc(db, "users", userDoc.id), {
@@ -333,37 +335,40 @@ function TeamManager({ userProfile }: { userProfile: any }) {
 
       setNewEmail("");
       fetchMembers();
-      setSuccessMsg("Berhasil menambahkan anggota tim.");
+      alert("Berhasil menambahkan anggota tim.");
     } catch (err) {
-      setErrorMsg("Gagal menambahkan anggota: " + (err as Error).message);
+      alert("Gagal menambahkan anggota: " + (err as Error).message);
     } finally {
       setIsAdding(false);
     }
   };
 
   const handleRemoveMember = async (memberId: string) => {
-    setErrorMsg(null);
-    setSuccessMsg(null);
+    if (!confirm("Hapus anggota ini dari tim?")) return;
     try {
       const docRef = doc(db, "users", memberId);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         const data = docSnap.data();
         const userEmail = data.email?.toLowerCase();
-        
-        // Always delete the document entirely from the users collection
-        await deleteDoc(docRef);
+        if (!data.uid) {
+          // It is a skeleton doc, delete entirely
+          await deleteDoc(docRef);
+        } else {
+          // Registered user, unlink agency affiliation and reset status to pending and set removedByAgency flag
+          await updateDoc(docRef, {
+            agencyId: null,
+            status: "pending",
+            removedByAgency: true
+          });
 
-        // Delete any secondary skeleton docs with the same email in the collection to prevent races
-        if (userEmail) {
-          const q = query(collection(db, "users"), where("email", "==", userEmail), where("agencyId", "==", userProfile.uid), limit(5));
-          const snap = await getDocs(q);
-          for (const docD of snap.docs) {
-            if (docD.id !== memberId) {
-              try {
+          // Delete other skeleton docs with the same email in the collection to prevent migration races
+          if (userEmail) {
+            const q = query(collection(db, "users"), where("email", "==", userEmail));
+            const snap = await getDocs(q);
+            for (const docD of snap.docs) {
+              if (docD.id !== memberId && !docD.data().uid) {
                 await deleteDoc(doc(db, "users", docD.id));
-              } catch (delErr) {
-                console.warn("Skipping deletion of secondary user (no permission or already deleted):", delErr);
               }
             }
           }
@@ -373,11 +378,8 @@ function TeamManager({ userProfile }: { userProfile: any }) {
         usageCount: increment(-1)
       });
       fetchMembers();
-      setSuccessMsg("Berhasil menghapus anggota dari tim.");
     } catch (e) {
-      setErrorMsg("Gagal menghapus: " + (e as Error).message);
-    } finally {
-      setConfirmDeleteId(null);
+      alert("Gagal menghapus: " + (e as Error).message);
     }
   };
 
@@ -415,30 +417,6 @@ function TeamManager({ userProfile }: { userProfile: any }) {
         <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-1">My Team</h1>
         <p className="text-slate-500">Kelola anggota tim / user Anda ({userProfile?.usageCount || 0} / {userProfile?.licenseStatus === 'unlimited' ? '∞' : (userProfile?.userQuota || 0)} digunakan).</p>
       </div>
-
-      {errorMsg && (
-        <div className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-xl flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 flex-shrink-0" />
-            <p className="text-sm font-medium">{errorMsg}</p>
-          </div>
-          <button onClick={() => setErrorMsg(null)} className="text-red-400 hover:text-red-600">
-            <XCircle className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-
-      {successMsg && (
-        <div className="mb-6 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 px-4 py-3 rounded-xl flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <Check className="w-5 h-5 flex-shrink-0 text-emerald-600 dark:text-emerald-400" />
-            <p className="text-sm font-medium">{successMsg}</p>
-          </div>
-          <button onClick={() => setSuccessMsg(null)} className="text-emerald-400 hover:text-emerald-600">
-            <XCircle className="w-4 h-4" />
-          </button>
-        </div>
-      )}
 
       <form onSubmit={handleAddMember} className="mb-6 bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row gap-4">
         <div className="flex-1">
@@ -527,31 +505,12 @@ function TeamManager({ userProfile }: { userProfile: any }) {
                       {m.lastLogin ? new Date(m.lastLogin.seconds * 1000).toLocaleString('id-ID') : "-"}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      {confirmDeleteId === m.id ? (
-                        <div className="flex items-center justify-end gap-2 animate-in fade-in zoom-in-95 duration-200">
-                          <span className="text-[11px] font-bold text-red-500 animate-pulse">Yakin hapus?</span>
-                          <button 
-                            onClick={() => handleRemoveMember(m.id)}
-                            className="bg-red-600 hover:bg-red-700 text-white px-2.5 py-1 rounded-lg text-xs font-bold transition-all shadow-sm"
-                          >
-                            Ya
-                          </button>
-                          <button 
-                            onClick={() => setConfirmDeleteId(null)}
-                            className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 px-2.5 py-1 rounded-lg text-xs font-bold transition-all border border-slate-200 dark:border-slate-700"
-                          >
-                            Batal
-                          </button>
-                        </div>
-                      ) : (
-                        <button 
-                          onClick={() => setConfirmDeleteId(m.id)}
-                          className="text-slate-400 hover:text-red-600 dark:text-slate-500 dark:hover:text-red-400 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all inline-flex items-center justify-center"
-                          title="Hapus dari tim"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
+                      <button 
+                        onClick={() => handleRemoveMember(m.id)}
+                        className="text-red-600 hover:text-red-700 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </td>
                   </tr>
                 );
@@ -710,9 +669,6 @@ function AgencyManager({ isDarkMode }: { isDarkMode: boolean }) {
   const sortedAndFilteredUsers = useMemo(() => {
     // 1. Filter
     const filtered = users.filter(u => {
-      // Exclude team members that have agencyId set
-      if (u.agencyId) return false;
-
       const nameMatch = (u.displayName || "").toLowerCase().includes(searchQuery.toLowerCase());
       const emailMatch = (u.email || "").toLowerCase().includes(searchQuery.toLowerCase());
       const matchesSearch = !searchQuery || nameMatch || emailMatch;
@@ -1150,6 +1106,8 @@ export default function App() {
     halaman: 2,
     rasio: '30:70',
     drillingMode: false,
+    tipeKonten: 'STANDAR',
+    sertakanCover: false,
     mode: 'STANDAR',
     visual: 'PLAYFUL_COLOR',
     namaGuru: '',
@@ -1388,7 +1346,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
             console.log("User profile marks as removed by agency. Skipping migration.");
           } else {
             // Check if there is a pending license/skeleton for this email
-            const q = query(collection(db, "users"), where("email", "==", user.email?.toLowerCase()), limit(5));
+            const q = query(collection(db, "users"), where("email", "==", user.email?.toLowerCase()));
             const querySnap = await getDocs(q);
             
             if (!querySnap.empty) {
@@ -1528,7 +1486,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
   };
 
   const numSiswaPages = parseInt(String(formData.halaman)) || 1;
-  const numGuruPages = Math.ceil(numSiswaPages / 2);
+  const numGuruPages = formData.tipeKonten === 'MATERI' ? 0 : Math.ceil(numSiswaPages / 2);
 
   // Modified calls using BYOK logic
   const handleSuggestMateri = async () => {
@@ -1634,8 +1592,15 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
         - Jenjang: ${formData.jenjang}
         - Fase & Kelas/Tingkat: ${formData.fase} - ${formData.kelas}
         - Jumlah Halaman Siswa: ${numSiswaPages} halaman
-        - Jumlah Halaman Guru: ${numGuruPages} halaman (Otomatis ditambahkan di akhir untuk kunci jawaban)
-        - Mode Konten: ${formData.drillingMode ? 'DRILLING MODE AKTIF — Hanya soal latihan padat, ZERO materi teori, target kepadatan soal maksimal per halaman. Outline hanya berisi daftar soal/latihan tanpa alokasi halaman materi.' : `Rasio Materi vs Latihan: ${formData.rasio}`}
+        - Halaman Cover: ${formData.sertakanCover ? 'Halaman 1 dialokasikan khusus untuk Cover/Identitas.' : 'Tidak ada halaman cover khusus.'}
+        - Jumlah Halaman Guru: ${numGuruPages} halaman ${numGuruPages > 0 ? '(Otomatis ditambahkan di akhir untuk kunci jawaban)' : '(Tidak diperlukan karena mode Materi Saja)'}
+        - Mode Konten: ${
+          formData.tipeKonten === 'DRILLING' || formData.drillingMode 
+            ? 'DRILLING MODE AKTIF — Hanya soal latihan padat, ZERO materi teori, target kepadatan soal maksimal per halaman. Outline hanya berisi daftar soal/latihan tanpa alokasi halaman materi.' 
+            : formData.tipeKonten === 'MATERI'
+            ? 'MATERI SAJA AKTIF — Hanya berisi rangkuman materi teori, infografis, atau bacaan. ZERO soal latihan atau pertanyaan.'
+            : `Rasio Materi vs Latihan: ${formData.rasio}`
+        }
         - Mode Kesulitan: ${formData.mode}
         - Gaya Visual: ${formData.visual}
         - Tema Karakter (Maskot): ${formData.karakter}
@@ -1799,18 +1764,24 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
     try {
       const isGuru = pageId.startsWith('Guru');
       const pageTargetName = isGuru ? `Halaman ${pageId} (Kunci Jawaban)` : `Halaman ${pageId} (Lembar Kerja Siswa)`;
-      const drillingInstruction = formData.drillingMode
-        ? 'INSTRUKSI KERAS — DRILLING MODE: Halaman ini HANYA berisi soal latihan. DILARANG TOTAL ada blok materi atau teori. Gunakan layout 2-kolom untuk soal PG. Susun soal sepadat mungkin. '
-        : '';
+      let modeInstruction = '';
+      if (formData.tipeKonten === 'DRILLING' || formData.drillingMode) {
+        modeInstruction = 'INSTRUKSI KERAS — DRILLING MODE: Halaman ini HANYA berisi soal latihan. DILARANG TOTAL ada blok materi atau teori. Gunakan layout 2-kolom untuk soal PG. Susun soal sepadat mungkin. ';
+      } else if (formData.tipeKonten === 'MATERI') {
+        modeInstruction = 'INSTRUKSI KERAS — MODE MATERI SAJA: Halaman ini HANYA berisi rangkuman bacaan atau infografis. DILARANG TOTAL menyertakan soal latihan, kuis, field isian kosong, atau pertanyaan apapun. ';
+      }
+
       const optionalInstructions = formData.pesanKhusus
-        ? `${drillingInstruction}User meminta: "${formData.pesanKhusus}". Wajib integrasikan permintaan ini ke dalam tema konten dan visual_prompt.`
-        : (drillingInstruction || 'Tidak ada instruksi khusus tambahan.');
+        ? `${modeInstruction}User meminta: "${formData.pesanKhusus}". Wajib integrasikan permintaan ini ke dalam tema konten dan visual_prompt.`
+        : (modeInstruction || 'Tidak ada instruksi khusus tambahan.');
       
       let pageContext = "";
       if (isGuru) {
         pageContext = "SANGAT PENTING: Karena ini adalah HALAMAN GURU, terapkan aturan BAGIAN 1 - HALAMAN TERAKHIR secara ketat. Dilarang menggunakan elemen dekoratif berlebihan, pastikan semua KUNCI JAWABAN dan rubrik evaluasi ditampilkan dengan jelas.";
+      } else if (pageId === "1" && formData.sertakanCover) {
+        pageContext = "SANGAT PENTING: Ini adalah HALAMAN COVER. Terapkan aturan BAGIAN 1 - HALAMAN 1 (COVER PENUH) secara ketat. Dilarang memberikan materi atau soal latihan di halaman ini. Harus berupa layout cover besar dengan maskot/ilustrasi yang dominan.";
       } else if (pageId === "1") {
-        pageContext = "SANGAT PENTING: Ini adalah HALAMAN 1. Terapkan aturan BAGIAN 1 - HALAMAN 1 secara ketat (Wajib ada HEADER_IDENTITAS_LENGKAP di bagian atas sebelum soal/materi).";
+        pageContext = "SANGAT PENTING: Ini adalah HALAMAN 1. Terapkan aturan BAGIAN 1 - HALAMAN 1 (STANDAR) secara ketat (Wajib ada HEADER_IDENTITAS_LENGKAP di bagian atas sebelum soal/materi).";
       } else {
         pageContext = "SANGAT PENTING: Karena ini adalah HALAMAN SISWA, DILARANG KERAS mencantumkan jawaban yang benar di dalam JSON (seperti tanda silang, lingkaran, atau teks penanda pada jawaban). Terapkan aturan BAGIAN 1 - HALAMAN 2 DST.";
       }
@@ -1827,7 +1798,13 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
         ${outlineText}
         
         Gaya Visual: ${formData.visual}
-        Mode Konten: ${formData.drillingMode ? 'DRILLING_MODE: true — Terapkan BAGIAN 3B secara penuh. ZERO materi teori. Layout 2 kolom. Kepadatan soal maksimal.' : `Rasio Materi:Latihan: ${formData.rasio}`}
+        Mode Konten: ${
+          formData.tipeKonten === 'DRILLING' || formData.drillingMode 
+            ? 'DRILLING_MODE: true — Terapkan BAGIAN 3B secara penuh. ZERO materi teori.' 
+            : formData.tipeKonten === 'MATERI'
+            ? 'MATERI_SAJA_MODE: true — Terapkan BAGIAN 3C secara penuh. ZERO soal latihan.'
+            : `Rasio Materi:Latihan: ${formData.rasio}`
+        }
         Tema Karakter: ${formData.karakter}
         Mode: ${formData.mode}
         Bilingual: ${formData.bilingual ? 'Ya' : 'Tidak'}
@@ -2639,8 +2616,8 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
                               className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 rounded-xl px-4 py-2.5 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none text-center" 
                             />
                           </div>
-                          {!formData.drillingMode && (
-                            <div className="flex flex-col gap-1.5 col-span-8">
+                          {(!formData.drillingMode && formData.tipeKonten !== 'DRILLING' && formData.tipeKonten !== 'MATERI') && (
+                            <div className="flex flex-col gap-1.5 col-span-8 animate-in slide-in-from-top-2">
                               <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Rasio Materi : Latihan</label>
                               <input 
                                 list="rasio-options"
@@ -2661,26 +2638,59 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
                         </div>
 
                         <div className="col-span-12 mt-1">
-                          <label className={`flex items-center gap-3 p-3.5 border-2 rounded-xl cursor-pointer transition-all ${formData.drillingMode ? 'border-orange-400 bg-orange-50 dark:bg-orange-900/20' : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
+                          <label className={`flex items-center gap-3 p-3.5 border-2 rounded-xl cursor-pointer transition-all ${formData.sertakanCover ? 'border-purple-400 bg-purple-50 dark:bg-purple-900/20' : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
                             <input
                               type="checkbox"
-                              name="drillingMode"
-                              checked={formData.drillingMode}
+                              name="sertakanCover"
+                              checked={formData.sertakanCover}
                               onChange={handleChange}
-                              className="w-5 h-5 accent-orange-500 rounded"
+                              className="w-5 h-5 accent-purple-500 rounded"
                             />
                             <div className="flex flex-col">
-                              <span className={`text-sm font-bold ${formData.drillingMode ? 'text-orange-700 dark:text-orange-400' : 'text-slate-700 dark:text-slate-200'}`}>
-                                ⚡ Mode Drilling (Full Soal)
+                              <span className={`text-sm font-bold ${formData.sertakanCover ? 'text-purple-700 dark:text-purple-400' : 'text-slate-700 dark:text-slate-200'}`}>
+                                🎨 Sertakan Halaman Cover
                               </span>
                               <span className="text-xs text-slate-500 dark:text-slate-400">
-                                Halaman diisi penuh soal latihan, tanpa blok materi teori.
+                                Halaman pertama akan dijadikan sampul menarik tanpa konten materi/soal.
                               </span>
                             </div>
-                            {formData.drillingMode && (
-                              <span className="ml-auto text-[10px] font-bold px-2 py-1 bg-orange-500 text-white rounded-full flex-shrink-0">AKTIF</span>
+                            {formData.sertakanCover && (
+                              <span className="ml-auto text-[10px] font-bold px-2 py-1 bg-purple-500 text-white rounded-full flex-shrink-0">COVER AKTIF</span>
                             )}
                           </label>
+                        </div>
+
+                        <div className="col-span-12 mt-2">
+                          <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2 block">Tipe Konten (Mode)</label>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            {[
+                              { id: 'STANDAR', title: 'Standar', desc: 'Materi & Latihan' },
+                              { id: 'DRILLING', title: 'Drilling', desc: 'Full Soal' },
+                              { id: 'MATERI', title: 'Materi Saja', desc: 'Full Teori' }
+                            ].map(tipe => {
+                              const isActive = formData.tipeKonten === tipe.id || (tipe.id === 'DRILLING' && formData.drillingMode && formData.tipeKonten === undefined);
+                              return (
+                                <label key={tipe.id} className="cursor-pointer">
+                                  <input 
+                                    type="radio" 
+                                    name="tipeKonten" 
+                                    checked={isActive} 
+                                    onChange={() => setFormData({...formData, tipeKonten: tipe.id, drillingMode: tipe.id === 'DRILLING'})} 
+                                    className="peer sr-only" 
+                                  />
+                                  <div className={`p-3 rounded-xl border-2 transition-all flex flex-col items-center justify-center text-center h-full ${isActive ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20 shadow-sm' : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
+                                    <span className={`text-sm font-bold ${isActive ? 'text-blue-800 dark:text-blue-300' : 'text-slate-700 dark:text-slate-300'}`}>
+                                      {tipe.id === 'STANDAR' && '📚 '}
+                                      {tipe.id === 'DRILLING' && '⚡ '}
+                                      {tipe.id === 'MATERI' && '📖 '}
+                                      {tipe.title}
+                                    </span>
+                                    <span className="text-[10px] text-slate-500 mt-1">{tipe.desc}</span>
+                                  </div>
+                                </label>
+                              );
+                            })}
+                          </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
