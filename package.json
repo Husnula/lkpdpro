@@ -6,7 +6,8 @@
     "dev": "next dev --port=3000 --hostname=0.0.0.0",
     "build": "next build",
     "start": "next start --port=3000 --hostname=0.0.0.0",
-    "lint": "next lint"
+    "lint": "next lint",
+    "deploy": "git add . && git commit -m \"Deploy update via npm run deploy\" && git push origin main"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
@@ -18,7 +19,7 @@
     "firebase": "^12.13.0",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
-    "next": "^16.2.6",
+    "next": "^15.1.8",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "shadcn": "^4.7.0",
