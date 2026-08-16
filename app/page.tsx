@@ -40,10 +40,10 @@ BAGIAN 1 — STRUKTUR HALAMAN & KONTEN (PENTING)
 1. HALAMAN 1: COVER / IDENTITAS LENGKAP
 Tergantung instruksi, Halaman 1 bisa berupa Cover Penuh ATAU Identitas + Materi.
 JIKA INSTRUKSI MEMINTA HALAMAN COVER PENUH:
-- Fokus pada Tipografi Besar (Judul Utama & Subjudul).
-- Berikan "image_prompt" ilustrasi besar yang mendominasi sebagai hero image.
-- Sediakan Kotak Identitas Siswa (Nama, Kelas, No Absen).
-- JANGAN masukkan materi atau latihan di halaman ini.
+  - Fokus pada Tipografi Besar (Judul Utama & Subjudul).
+  - Berikan "image_prompt" ilustrasi besar yang mendominasi sebagai hero image.
+  - Sediakan Kotak Identitas Siswa (Nama, Kelas, No Absen). SANGAT PENTING: Karena akan dicetak, JANGAN gunakan placeholder teks seperti "Isi Nama Lengkap". Gunakan garis/titik kosong panjang (contoh: "Nama: _________________") agar bisa diisi tulisan tangan.
+  - JANGAN masukkan materi atau latihan di halaman ini.
 JIKA BUKAN COVER PENUH (STANDAR):
 - Gunakan area "HEADER_IDENTITAS_LENGKAP" di atas, lalu masuk ke materi/latihan.
 - Elemen wajib: Judul, Subjudul, Branding Sekolah, Kotak Identitas, Tujuan Pembelajaran, Petunjuk.
@@ -134,7 +134,8 @@ Skema utama:
 const buildFooterTemplate = (
   pageId: string, 
   namaGuru: string, 
-  tahunAjaran: string
+  tahunAjaran: string,
+  isCover: boolean = false
 ) => {
   const hasGuru = namaGuru && namaGuru.trim() !== '';
   const hasTahun = tahunAjaran && tahunAjaran.trim() !== '';
@@ -142,11 +143,11 @@ const buildFooterTemplate = (
 
   return {
     area: "FOOTER_BRANDING",
-    visual_prompt: "Thin dotted horizontal line separator. Single row below it: left side shows branding info if available, page number centered in bold 9pt, 'LKPD Generator Pro' right-aligned in 8pt sans-serif. No other elements.",
+    visual_prompt: "Desain footer kreatif tematik (misal elemen rumput, gelombang air, awan sebagai pemisah, BUKAN garis putus-putus kaku). Nomor halaman di dalam badge/bentuk menarik yang playful. Kiri: branding info, Kanan: 'LKPD Generator Pro'.",
     elements: [
       {
         type: "divider",
-        style: "thin_dotted_line"
+        style: "creative_themed_separator"
       },
       {
         type: "layout_row",
@@ -162,9 +163,9 @@ const buildFooterTemplate = (
             style: "normal_7pt"
           },
           {
-            content: `- ${pageId} -`,
+            content: isCover ? null : `${pageId}`,
             alignment: "center",
-            style: "bold_9pt"
+            style: "bold_9pt_badge"
           },
           {
             content: "LKPD Generator Pro",
@@ -1789,7 +1790,8 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
       const footerTemplate = buildFooterTemplate(
         pageId,
         formData.namaGuru,
-        formData.tahunAjaran
+        formData.tahunAjaran,
+        pageId === "1" && formData.sertakanCover
       );
       const footerTemplateStr = JSON.stringify(footerTemplate, null, 2);
 
