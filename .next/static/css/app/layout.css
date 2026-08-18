@@ -661,6 +661,9 @@
   .cursor-pointer {
     cursor: pointer;
   }
+  .resize {
+    resize: both;
+  }
   .resize-none {
     resize: none;
   }
@@ -837,6 +840,9 @@
   }
   .border-amber-200 {
     border-color: var(--color-amber-200);
+  }
+  .border-amber-400 {
+    border-color: var(--color-amber-400);
   }
   .border-blue-100 {
     border-color: var(--color-blue-100);
@@ -1406,6 +1412,9 @@
   .antialiased {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+  .accent-amber-500 {
+    accent-color: var(--color-amber-500);
   }
   .accent-blue-600 {
     accent-color: var(--color-blue-600);

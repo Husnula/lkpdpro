@@ -12,7 +12,7 @@ import {
   User, BadgeInfo, Plus, HelpCircle, Bell, Menu, Lightbulb,
   Smile, Brain, Zap, ToyBrick, LayoutDashboard, TreePine, Waves,
   FileSymlink, LogOut, ShieldAlert, Trash2, FolderOpen, Save,
-  Clock, PlusCircle, Search, Sparkles
+  Clock, PlusCircle, Search, Sparkles, Share2
 } from 'lucide-react';
 import { useAuth } from '@/components/AuthGuard';
 import Image from 'next/image';
@@ -40,10 +40,10 @@ BAGIAN 1 — STRUKTUR HALAMAN & KONTEN (PENTING)
 1. HALAMAN 1: COVER / IDENTITAS LENGKAP
 Tergantung instruksi, Halaman 1 bisa berupa Cover Penuh ATAU Identitas + Materi.
 JIKA INSTRUKSI MEMINTA HALAMAN COVER PENUH:
-- Fokus pada Tipografi Besar (Judul Utama & Subjudul).
-- Berikan "image_prompt" ilustrasi besar yang mendominasi sebagai hero image.
-- Sediakan Kotak Identitas Siswa (Nama, Kelas, No Absen).
-- JANGAN masukkan materi atau latihan di halaman ini.
+  - Fokus pada Tipografi Besar (Judul Utama & Subjudul).
+  - Berikan "image_prompt" ilustrasi besar yang mendominasi sebagai hero image.
+  - Sediakan Kotak Identitas Siswa (Nama, Kelas, No Absen). SANGAT PENTING: Karena akan dicetak, JANGAN gunakan placeholder teks seperti "Isi Nama Lengkap". Gunakan garis/titik kosong panjang (contoh: "Nama: _________________") agar bisa diisi tulisan tangan.
+  - JANGAN masukkan materi atau latihan di halaman ini.
 JIKA BUKAN COVER PENUH (STANDAR):
 - Gunakan area "HEADER_IDENTITAS_LENGKAP" di atas, lalu masuk ke materi/latihan.
 - Elemen wajib: Judul, Subjudul, Branding Sekolah, Kotak Identitas, Tujuan Pembelajaran, Petunjuk.
@@ -129,12 +129,20 @@ Skema utama:
     // Daftar area seperti header, konten soal, footer
   ]
 }
+
+BAGIAN 7 — HALAMAN UPSELL (MARKETING & KREDIT)
+Jika pengguna mengaktifkan mode Upsell/Kredit, halaman ini digunakan murni untuk marketing kreator.
+1. ZERO MATERI & SOAL: Dilarang memasukkan konten edukasi apapun di halaman ini.
+2. FOKUS CALL TO ACTION (CTA): Buat elemen visual yang besar dan menarik yang menampilkan "Judul", "Pesan", dan "Nama Kreator".
+3. QR CODE: Jika diinstruksikan menyertakan QR Code, sertakan placeholder visual untuk QR Code yang mengarah ke Link Target.
+4. GAYA VISUAL KREATIF: Halaman ini boleh menggunakan ilustrasi besar, warna yang mencolok, dan tipografi yang persuasif untuk menarik siswa/orang tua bergabung atau melihat produk lainnya.
 `;
 
 const buildFooterTemplate = (
   pageId: string, 
   namaGuru: string, 
-  tahunAjaran: string
+  tahunAjaran: string,
+  isCover: boolean = false
 ) => {
   const hasGuru = namaGuru && namaGuru.trim() !== '';
   const hasTahun = tahunAjaran && tahunAjaran.trim() !== '';
@@ -142,11 +150,11 @@ const buildFooterTemplate = (
 
   return {
     area: "FOOTER_BRANDING",
-    visual_prompt: "Thin dotted horizontal line separator. Single row below it: left side shows branding info if available, page number centered in bold 9pt, 'LKPD Generator Pro' right-aligned in 8pt sans-serif. No other elements.",
+    visual_prompt: "Desain footer kreatif tematik (misal elemen rumput, gelombang air, awan sebagai pemisah, BUKAN garis putus-putus kaku). Nomor halaman di dalam badge/bentuk menarik yang playful. Kiri: branding info, Kanan: 'LKPD Generator Pro'.",
     elements: [
       {
         type: "divider",
-        style: "thin_dotted_line"
+        style: "creative_themed_separator"
       },
       {
         type: "layout_row",
@@ -162,9 +170,9 @@ const buildFooterTemplate = (
             style: "normal_7pt"
           },
           {
-            content: `- ${pageId} -`,
+            content: isCover ? null : `${pageId}`,
             alignment: "center",
-            style: "bold_9pt"
+            style: "bold_9pt_badge"
           },
           {
             content: "LKPD Generator Pro",
@@ -1120,11 +1128,25 @@ export default function App() {
     ukuranKertas: 'A4',
     orientasi: 'Portrait',
     referensiProyek: '',
+    enableUpsell: false,
+    upsellTitle: 'Dapatkan Lebih Banyak LKPD Seperti Ini!',
+    upsellMessage: 'Jika Anda menyukai materi ini, bergabunglah dengan komunitas kami untuk mendapatkan update terbaru.',
+    upsellCreatorName: '',
+    upsellTargetUrl: '',
+    upsellIncludeQr: true,
   };
 
   const [formData, setFormData] = useState(defaultFormData);
 
-  // --- Start: Project Health/Memory Logic ---
+  // Force Swiper to recalculate slide height when upsell section expands/collapses
+  useEffect(() => {
+    if (swiperRef.current) {
+      setTimeout(() => {
+        swiperRef.current?.updateAutoHeight(300);
+      }, 50);
+    }
+  }, [formData.enableUpsell]);
+
   const projectUsage = useMemo(() => {
     try {
       const dataToMeasure = {
@@ -1608,15 +1630,17 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
         - Ukuran Kertas: ${formData.ukuranKertas}
         - Orientasi: ${formData.orientasi}
         - Instruksi Khusus: ${formData.pesanKhusus ? formData.pesanKhusus : 'Tidak ada'}
+        - Halaman Upsell/Kredit: ${formData.enableUpsell ? `Ya, Sertakan 1 halaman bernama "Hal Upsell" di akhir outline (berisi promosi: Judul "${formData.upsellTitle}", Pesan "${formData.upsellMessage}", Link "${formData.upsellTargetUrl}", Kreator "${formData.upsellCreatorName}")` : 'Tidak perlu'}
         ${contextPrev}
 
-        FORMAT OUTPUT YANG DIMINTA (Contoh untuk 2 siswa + 1 guru):
+        FORMAT OUTPUT YANG DIMINTA (Contoh untuk 2 siswa + 1 guru + Upsell):
         OUTLINE LKPD: [Mapel] — [Materi] | Kelas [X] | Mode: [Y]
         Hal 1 — Identitas + [Nama Aktivitas]: [deskripsi singkat]
         Hal 2 — [Nama Aktivitas]: [deskripsi singkat]
         ...
         Hal Guru 1 — Kunci Jawaban (Hal 1-2) + Rubrik Penilaian
         Hal Guru 2 (Jika ada) — Kunci Jawaban Lanjutan
+        Hal Upsell (Jika aktif) — Halaman Marketing & Kredit Kreator
         
         Alokasi waktu estimasi total: ±XX menit
       `;
@@ -1763,7 +1787,8 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
     
     try {
       const isGuru = pageId.startsWith('Guru');
-      const pageTargetName = isGuru ? `Halaman ${pageId} (Kunci Jawaban)` : `Halaman ${pageId} (Lembar Kerja Siswa)`;
+      const isUpsell = pageId === 'Upsell';
+      const pageTargetName = isGuru ? `Halaman ${pageId} (Kunci Jawaban)` : isUpsell ? `Halaman ${pageId} (Marketing & Kredit)` : `Halaman ${pageId} (Lembar Kerja Siswa)`;
       let modeInstruction = '';
       if (formData.tipeKonten === 'DRILLING' || formData.drillingMode) {
         modeInstruction = 'INSTRUKSI KERAS — DRILLING MODE: Halaman ini HANYA berisi soal latihan. DILARANG TOTAL ada blok materi atau teori. Gunakan layout 2-kolom untuk soal PG. Susun soal sepadat mungkin. ';
@@ -1782,6 +1807,8 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
         pageContext = "SANGAT PENTING: Ini adalah HALAMAN COVER. Terapkan aturan BAGIAN 1 - HALAMAN 1 (COVER PENUH) secara ketat. Dilarang memberikan materi atau soal latihan di halaman ini. Harus berupa layout cover besar dengan maskot/ilustrasi yang dominan.";
       } else if (pageId === "1") {
         pageContext = "SANGAT PENTING: Ini adalah HALAMAN 1. Terapkan aturan BAGIAN 1 - HALAMAN 1 (STANDAR) secara ketat (Wajib ada HEADER_IDENTITAS_LENGKAP di bagian atas sebelum soal/materi).";
+      } else if (isUpsell) {
+        pageContext = `SANGAT PENTING: Ini adalah HALAMAN UPSELL. Terapkan aturan BAGIAN 7 secara ketat. Buat halaman yang mempromosikan kreator/brand dengan judul "${formData.upsellTitle}", pesan "${formData.upsellMessage}", link "${formData.upsellTargetUrl}", nama kreator "${formData.upsellCreatorName}", dan QR Code: ${formData.upsellIncludeQr ? 'Sertakan (gunakan gambar placeholder QR)' : 'Tidak perlu'}. Dilarang memberikan materi atau soal latihan.`;
       } else {
         pageContext = "SANGAT PENTING: Karena ini adalah HALAMAN SISWA, DILARANG KERAS mencantumkan jawaban yang benar di dalam JSON (seperti tanda silang, lingkaran, atau teks penanda pada jawaban). Terapkan aturan BAGIAN 1 - HALAMAN 2 DST.";
       }
@@ -1789,7 +1816,8 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
       const footerTemplate = buildFooterTemplate(
         pageId,
         formData.namaGuru,
-        formData.tahunAjaran
+        formData.tahunAjaran,
+        pageId === "1" && formData.sertakanCover
       );
       const footerTemplateStr = JSON.stringify(footerTemplate, null, 2);
 
@@ -1899,6 +1927,9 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
   };
 
   const pageTabs = Array.from({ length: numSiswaPages }, (_, i) => (i + 1).toString());
+  if (formData.enableUpsell) {
+    pageTabs.push("Upsell");
+  }
   const guruTabs = Array.from({ length: numGuruPages }, (_, i) => `Guru ${i + 1}`);
 
   // Mencegah Hydration Error yang mematikan fungsi tombol
@@ -2499,6 +2530,9 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
                 onSwiper={(swiper) => {
                   console.log("Swiper initialized");
                   swiperRef.current = swiper;
+                  // Recalculate height after React has rendered conditional content
+                  setTimeout(() => swiper.updateAutoHeight(300), 200);
+                  setTimeout(() => swiper.updateAutoHeight(300), 800);
                 }}
                 onSlideChange={(swiper) => {
                   console.log("Slide changed to:", swiper.activeIndex + 1);
@@ -2506,6 +2540,8 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
                 }}
                 allowTouchMove={false}
                 autoHeight={true}
+                observer={true}
+                observeParents={true}
                 className="w-full"
               >
                 <SwiperSlide key="setup">
@@ -2744,6 +2780,81 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
                           </div>
                         </div>
                       </div>
+
+                      <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 md:p-6 border border-slate-200 dark:border-slate-800 shadow-sm">
+                        <div className="flex items-center gap-2 mb-5 pb-3 border-b border-slate-100 dark:border-slate-800">
+                          <Share2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Marketing & Upsell</h2>
+                        </div>
+
+                        <label className={`flex items-center gap-3 p-3.5 border-2 rounded-xl cursor-pointer transition-all mb-4 ${formData.enableUpsell ? 'border-amber-400 bg-amber-50 dark:bg-amber-900/20' : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
+                          <input
+                            type="checkbox"
+                            name="enableUpsell"
+                            checked={formData.enableUpsell}
+                            onChange={(e) => setFormData({...formData, enableUpsell: e.target.checked})}
+                            className="w-5 h-5 accent-amber-500 rounded"
+                          />
+                          <div className="flex flex-col">
+                            <span className={`text-sm font-bold ${formData.enableUpsell ? 'text-amber-700 dark:text-amber-400' : 'text-slate-700 dark:text-slate-200'}`}>
+                              🚀 Sertakan Halaman Upsell/Kredit
+                            </span>
+                            <span className="text-xs text-slate-500 dark:text-slate-400">
+                              Tambahkan halaman ekstra di akhir untuk mempromosikan grup WA, web, atau produk Anda.
+                            </span>
+                          </div>
+                        </label>
+
+                        {formData.enableUpsell && (
+                          <div className="flex flex-col gap-4 animate-in slide-in-from-top-2">
+                            <div className="flex flex-col gap-1.5">
+                              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Judul Upsell (Call to Action)</label>
+                              <input 
+                                type="text" name="upsellTitle" value={formData.upsellTitle} onChange={handleChange} 
+                                placeholder="Contoh: Dapatkan Lebih Banyak LKPD Seperti Ini!"
+                                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 rounded-xl px-4 py-2.5 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none text-sm"
+                              />
+                            </div>
+                            
+                            <div className="flex flex-col gap-1.5">
+                              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Pesan Promosi</label>
+                              <textarea 
+                                name="upsellMessage" value={formData.upsellMessage} onChange={handleChange} 
+                                placeholder="Jelaskan benefit bergabung/membeli produk Anda..."
+                                style={{resize: 'none'}}
+                                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 rounded-xl px-4 py-2.5 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none text-sm h-20"
+                              />
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Target URL (Link)</label>
+                              <input 
+                                type="text" name="upsellTargetUrl" value={formData.upsellTargetUrl} onChange={handleChange} 
+                                placeholder="https://t.me/grupanda atau https://tokoku.com"
+                                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 rounded-xl px-4 py-2.5 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none text-sm"
+                              />
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Nama Kreator/Brand</label>
+                              <input 
+                                type="text" name="upsellCreatorName" value={formData.upsellCreatorName} onChange={handleChange} 
+                                placeholder="Contoh: Pak Budi (Guru Matematika)"
+                                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 rounded-xl px-4 py-2.5 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none text-sm"
+                              />
+                            </div>
+
+                            <label className="flex items-center gap-3 p-3 border border-slate-200 dark:border-slate-700 rounded-xl cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                              <input type="checkbox" name="upsellIncludeQr" checked={formData.upsellIncludeQr} onChange={(e) => setFormData({...formData, upsellIncludeQr: e.target.checked})} className="w-4 h-4 accent-amber-500 rounded" />
+                              <div className="flex flex-col">
+                                <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Tampilkan QR Code Otomatis</span>
+                                <span className="text-xs text-slate-500 dark:text-slate-400">AI akan menggambar placeholder QR mengarah ke Target URL di atas</span>
+                              </div>
+                            </label>
+                          </div>
+                        )}
+                      </div>
+
                     </div>
 
                     <div className="lg:col-span-5 flex flex-col gap-6">
@@ -2965,7 +3076,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
                                       onClick={() => setActiveTab(tab)} 
                                       className={`min-w-[100px] lg:w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-xs lg:text-sm font-medium transition-all ${activeTab === tab ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20 scale-[1.02]' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                                     >
-                                      <span className="truncate">Hal {tab}</span>
+                                      <span className="truncate">{tab === 'Upsell' ? 'Hal Upsell' : `Hal ${tab}`}</span>
                                       {pageData[tab]?.data ? <CheckCircle className="w-3.5 h-3.5 text-emerald-400" /> : <div className="w-1.5 h-1.5 rounded-full bg-slate-200 dark:bg-slate-700"></div>}
                                     </button>
                                   </li>
