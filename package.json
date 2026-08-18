@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start --port=3000 --hostname=0.0.0.0",
     "lint": "next lint",
-    "deploy": "git add . && git commit -m \"Deploy update via npm run deploy\" && git push origin main"
+    "deploy": "git add . && (git commit -m \"Deploy update via npm run deploy\" || echo \"Nothing new to commit\") && git push origin main"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
