@@ -1064,6 +1064,167 @@ function AgencyManager({ isDarkMode }: { isDarkMode: boolean }) {
   );
 }
 
+// ── ASCII WIREFRAME RENDERER ──────────────────────────────────────────────
+const generateAsciiWireframe = (data: any): string => {
+  if (!data) return "NO DATA";
+  let output = "";
+  try {
+    const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+    
+    // Helper functions for ASCII drawing
+    const renderElement = (el: any, indent: string = ""): string => {
+      let str = "";
+      const t = el.type;
+      const content = el.content || el.question || el.title || "";
+      const text = typeof content === 'string' ? content : JSON.stringify(content);
+      
+      switch (t) {
+        case 'section_heading':
+        case 'title':
+          str += `${indent}==== [ ${text.toUpperCase()} ] ====\n`;
+          break;
+        case 'sub_section_heading':
+          str += `${indent}--- ${text} ---\n`;
+          break;
+        case 'paragraph':
+        case 'text_block':
+        case 'text':
+          str += `${indent}${text}\n`;
+          break;
+        case 'divider':
+          str += `${indent}------------------------------------------------------------\n`;
+          break;
+        case 'bullet_points':
+        case 'bullet_list':
+          const points = el.points || el.items || [];
+          points.forEach((p: any) => {
+             str += `${indent}* ${typeof p === 'string' ? p : JSON.stringify(p)}\n`;
+          });
+          break;
+        case 'numbered_list':
+        case 'ordered_list':
+          const items = el.items || el.points || [];
+          items.forEach((p: any, i: number) => {
+             str += `${indent}${i+1}. ${typeof p === 'string' ? p : JSON.stringify(p)}\n`;
+          });
+          break;
+        case 'image_placeholder':
+        case 'image':
+          str += `${indent}+----------------------------------------------------+\n`;
+          str += `${indent}| [ 🖼️ IMAGE ] ${text.substring(0, 36).padEnd(36)} |\n`;
+          str += `${indent}+----------------------------------------------------+\n`;
+          break;
+        case 'callout':
+        case 'info_box':
+        case 'note_box':
+        case 'highlight_box':
+          str += `${indent}+-- [ ${el.variant ? el.variant.toUpperCase() : 'INFO'} ] ----------------------------------------\n`;
+          if (el.title) str += `${indent}| ${el.title}\n`;
+          str += `${indent}| ${text}\n`;
+          str += `${indent}+----------------------------------------------------+\n`;
+          break;
+        case 'multiple_choice':
+          str += `${indent}? ${text}\n`;
+          const opts = el.options || [];
+          opts.forEach((o: any, i: number) => {
+            str += `${indent}  [${String.fromCharCode(65+i)}] ${typeof o === 'string' ? o : JSON.stringify(o)}\n`;
+          });
+          break;
+        case 'fill_in_the_blank':
+          str += `${indent}> ${text} _____________\n`;
+          break;
+        case 'matching':
+        case 'matching_column':
+          str += `${indent}[ MATCHING COLUMNS ]\n`;
+          const left = el.left_column || el.column_a || [];
+          const right = el.right_column || el.column_b || [];
+          const max = Math.max(left.length, right.length);
+          for(let i=0; i<max; i++) {
+             const l = left[i] ? `${i+1}. ${typeof left[i] === 'string' ? left[i] : JSON.stringify(left[i])}` : "";
+             const r = right[i] ? `[${String.fromCharCode(65+i)}] ${typeof right[i] === 'string' ? right[i] : JSON.stringify(right[i])}` : "";
+             str += `${indent}  ${l.padEnd(30)} | ${r}\n`;
+          }
+          break;
+        case 'essay':
+        case 'short_answer':
+          str += `${indent}? ${text}\n`;
+          str += `${indent}  ____________________________________________________\n`;
+          str += `${indent}  ____________________________________________________\n`;
+          break;
+        case 'table':
+          str += `${indent}[ TABLE ]\n`;
+          const headers = el.headers || (el.rows?.[0] ? Object.keys(el.rows[0]) : []);
+          if (headers.length > 0) {
+             str += `${indent}| ` + headers.join(" | ") + " |\n";
+             str += `${indent}|` + headers.map(() => "---").join("|") + "|\n";
+          }
+          const rows = el.rows || [];
+          rows.forEach((r: any) => {
+             const vals = Array.isArray(r) ? r : Object.values(r);
+             str += `${indent}| ` + vals.map(v => typeof v === 'string' ? v : JSON.stringify(v)).join(" | ") + " |\n";
+          });
+          break;
+        case 'header_identitas':
+        case 'student_identity':
+        case 'identity_block':
+          str += `${indent}[ STUDENT IDENTITY ]\n`;
+          const fields = el.fields || ['Nama', 'Kelas', 'Tanggal'];
+          fields.forEach((f: string) => {
+             str += `${indent}${f.padEnd(10)}: ____________________\n`;
+          });
+          break;
+        case 'footer':
+        case 'footer_branding':
+          str += `${indent}------------------------------------------------------------\n`;
+          str += `${indent}${text}\n`;
+          break;
+        case 'upsell_section':
+        case 'upsell_area':
+          str += `${indent}============================================================\n`;
+          str += `${indent}[ UPSELL / CALL TO ACTION ]\n`;
+          if (el.elements) {
+            el.elements.forEach((child: any) => {
+               str += renderElement(child, indent + "  ");
+            });
+          }
+          str += `${indent}============================================================\n`;
+          break;
+        default:
+          str += `${indent}[${t}] ${text}\n`;
+          if (el.elements) {
+            el.elements.forEach((child: any) => {
+               str += renderElement(child, indent + "  ");
+            });
+          }
+          break;
+      }
+      return str + "\n";
+    };
+
+    if (parsed.meta) {
+      output += `[ META ]\n`;
+      output += `Page: ${parsed.meta.page_number} | Subject: ${parsed.meta.subject} | Paper: ${parsed.meta.paper_size}\n`;
+      output += `------------------------------------------------------------\n\n`;
+    }
+
+    if (parsed.layout_structure) {
+      parsed.layout_structure.forEach((area: any) => {
+        output += `[ AREA: ${area.area} ]\n`;
+        if (area.elements) {
+          area.elements.forEach((el: any) => {
+            output += renderElement(el, "  ");
+          });
+        }
+        output += `\n`;
+      });
+    }
+
+  } catch(e) {
+    output = "Error parsing JSON data: " + (e as Error).message;
+  }
+  return output.trim();
+};
+
 export default function App() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [view, setView] = useState<"dashboard" | "generator" | "api_settings">("dashboard");
@@ -1140,9 +1301,9 @@ export default function App() {
 
   // Force Swiper to recalculate slide height when upsell section expands/collapses
   useEffect(() => {
-    if (swiperRef.current) {
+    if (swiperRef.current && swiperRef.current.params) {
       setTimeout(() => {
-        swiperRef.current?.updateAutoHeight(300);
+        if (swiperRef.current && swiperRef.current.params) swiperRef.current.updateAutoHeight(300);
       }, 50);
     }
   }, [formData.enableUpsell]);
@@ -1507,8 +1668,9 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
     setFormData((prev: any) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
   };
 
-  const numSiswaPages = parseInt(String(formData.halaman)) || 1;
-  const numGuruPages = formData.tipeKonten === 'MATERI' ? 0 : Math.ceil(numSiswaPages / 2);
+  const fallbackSiswaPages = parseInt(String(formData.halaman)) || 1;
+  const numSiswaPages = outlineText ? (outlineText.match(/^Hal \d+/gm)?.length || fallbackSiswaPages) : fallbackSiswaPages;
+  const numGuruPages = outlineText ? (outlineText.match(/^Hal Guru/gm)?.length || 0) : (formData.tipeKonten === 'MATERI' ? 0 : Math.ceil(fallbackSiswaPages / 2));
 
   // Modified calls using BYOK logic
   const handleSuggestMateri = async () => {
@@ -2531,8 +2693,8 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
                   console.log("Swiper initialized");
                   swiperRef.current = swiper;
                   // Recalculate height after React has rendered conditional content
-                  setTimeout(() => swiper.updateAutoHeight(300), 200);
-                  setTimeout(() => swiper.updateAutoHeight(300), 800);
+                  setTimeout(() => { if (swiper && swiper.params) swiper.updateAutoHeight(300); }, 200);
+                  setTimeout(() => { if (swiper && swiper.params) swiper.updateAutoHeight(300); }, 800);
                 }}
                 onSlideChange={(swiper) => {
                   console.log("Slide changed to:", swiper.activeIndex + 1);
@@ -3182,9 +3344,9 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
                             </div>
                           </div>
                         )}
-                        <div className="absolute inset-0 overflow-auto custom-scrollbar p-6 pb-24">
-                          <pre className="text-sm font-mono leading-relaxed text-slate-800 dark:text-slate-300 whitespace-pre">
-                            {pageData[activeTab]?.data ? JSON.stringify(pageData[activeTab].data, null, 2) : ''}
+                        <div className="absolute inset-0 overflow-auto custom-scrollbar p-6 pb-24 bg-[#0a0a0a]">
+                          <pre className="text-[11px] sm:text-xs font-mono leading-relaxed text-[#39ff14] whitespace-pre-wrap break-words">
+                            {pageData[activeTab]?.data ? generateAsciiWireframe(pageData[activeTab].data) : ''}
                           </pre>
                         </div>
 
