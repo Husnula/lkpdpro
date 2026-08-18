@@ -6,7 +6,7 @@
  * or disable the default devtool with "devtool: false".
  * If you are looking for production-ready output files, see mode: "production" (https://webpack.js.org/configuration/mode/).
  */
-(self["webpackChunk_N_E"] = self["webpackChunk_N_E"] || []).push([["app/page"],{
+self["webpackHotUpdate_N_E"]("app/page",{
 
 /***/ "(app-pages-browser)/./app/page.tsx":
 /*!**********************!*\
@@ -1116,11 +1116,4 @@ eval(__webpack_require__.ts("__webpack_require__.r(__webpack_exports__);\n/* har
 
 /***/ })
 
-},
-/******/ __webpack_require__ => { // webpackRuntimeModules
-/******/ var __webpack_exec__ = (moduleId) => (__webpack_require__(__webpack_require__.s = moduleId))
-/******/ __webpack_require__.O(0, ["main-app"], () => (__webpack_exec__("(app-pages-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-client-entry-loader.js?modules=%7B%22request%22%3A%22E%3A%5C%5C3.%20PRODUK%20DIGITAL%5C%5C05%20-%20Aplikasi%20dan%20Pengembangan%5C%5CApp%5C%5C26.%20LKPD%20GENERATOR%20PRO%5C%5Cremix_-lkpd-generator-pro%20(23)%5C%5Capp%5C%5Cpage.tsx%22%2C%22ids%22%3A%5B%5D%7D&server=false!")));
-/******/ var __webpack_exports__ = __webpack_require__.O();
-/******/ _N_E = __webpack_exports__;
-/******/ }
-]);
+});
