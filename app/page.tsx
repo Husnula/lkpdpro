@@ -1071,151 +1071,282 @@ const generateAsciiWireframe = (data: any): string => {
   try {
     const parsed = typeof data === 'string' ? JSON.parse(data) : data;
     
-    // Helper functions for ASCII drawing
-    const renderElement = (el: any, indent: string = ""): string => {
+    // Page width is 78 chars (excluding borders)
+    const PAGE_WIDTH = 76;
+    const HORIZONTAL_LINE = "+" + "-".repeat(PAGE_WIDTH) + "+";
+    
+    // Helpers
+    const wrapText = (text: string, maxLen: number): string[] => {
+      const words = text.split(' ');
+      const lines: string[] = [];
+      let currentLine = "";
+      for (const word of words) {
+        if ((currentLine + word).length > maxLen) {
+          if (currentLine) lines.push(currentLine.trim());
+          currentLine = word + " ";
+        } else {
+          currentLine += word + " ";
+        }
+      }
+      if (currentLine) lines.push(currentLine.trim());
+      return lines;
+    };
+
+    const printLine = (text: string, padChar: string = " ", align: "left" | "center" | "right" | "exact" = "left"): string => {
+      if (align === "exact") return `|${text}|\n`;
+      let content = text.substring(0, PAGE_WIDTH - 2); 
+      let paddingSize = Math.max(0, (PAGE_WIDTH - 2) - content.length);
+      let leftPad = 0, rightPad = 0;
+      if (align === "center") {
+        leftPad = Math.floor(paddingSize / 2);
+        rightPad = Math.ceil(paddingSize / 2);
+      } else if (align === "right") {
+        rightPad = 0;
+        leftPad = paddingSize;
+      } else {
+        leftPad = 0;
+        rightPad = paddingSize;
+      }
+      return `| ${padChar.repeat(leftPad)}${content}${padChar.repeat(rightPad)} |\n`;
+    };
+
+    const drawInnerBox = (title: string, contentLines: string[]): string[] => {
+       const boxWidth = PAGE_WIDTH - 4; // 72
+       let result: string[] = [];
+       let top = "";
+       if (title) {
+          const prefix = `+-- [ ${title} ] `;
+          top = prefix + "-".repeat(Math.max(0, boxWidth - prefix.length - 1)) + "+";
+       } else {
+          top = `+` + "-".repeat(boxWidth - 2) + "+";
+       }
+       result.push(top);
+       
+       contentLines.forEach(line => {
+          const stripped = line.substring(0, boxWidth - 4);
+          result.push(`| ${stripped.padEnd(boxWidth - 4, ' ')} |`);
+       });
+       result.push(`+` + "-".repeat(boxWidth - 2) + "+");
+       
+       return result.map(l => "  " + l + "  "); // 2 left + boxWidth(72) + 2 right = 76
+    };
+
+    output += HORIZONTAL_LINE + "\n";
+    
+    if (parsed.meta) {
+      const metaLines = [
+         `Page: ${parsed.meta.page_number} | Subject: ${parsed.meta.subject} | Paper: ${parsed.meta.paper_size}`
+      ];
+      const mBox = drawInnerBox("BARE MINIMUM LKPD", metaLines);
+      mBox.forEach(l => output += printLine(l, " ", "exact"));
+      output += HORIZONTAL_LINE + "\n";
+    }
+
+    const renderElement = (el: any): string => {
       let str = "";
       const t = el.type;
-      const content = el.content || el.question || el.title || "";
+      const content = el.content || el.question || el.title || el.text || "";
       const text = typeof content === 'string' ? content : JSON.stringify(content);
       
       switch (t) {
         case 'section_heading':
         case 'title':
-          str += `${indent}==== [ ${text.toUpperCase()} ] ====\n`;
+          str += printLine("");
+          str += printLine(text.toUpperCase(), " ", "center");
+          str += printLine("");
+          str += HORIZONTAL_LINE + "\n";
           break;
         case 'sub_section_heading':
-          str += `${indent}--- ${text} ---\n`;
+          str += printLine("");
+          str += printLine(`--- ${text.toUpperCase()} ---`, " ", "center");
+          str += printLine("");
           break;
         case 'paragraph':
         case 'text_block':
         case 'text':
-          str += `${indent}${text}\n`;
+          const pLines = wrapText(text, PAGE_WIDTH - 4);
+          str += printLine("");
+          pLines.forEach(l => str += printLine(l));
+          str += printLine("");
+          break;
+        case 'text_box':
+          const tLines = wrapText(text, PAGE_WIDTH - 14);
+          const tBoxLines = [];
+          tBoxLines.push("❝");
+          tLines.forEach(l => tBoxLines.push("   " + l));
+          tBoxLines.push(" ".repeat(PAGE_WIDTH - 14) + "❞");
+          const tBox = drawInnerBox("TEXT BOX", tBoxLines);
+          str += printLine("");
+          tBox.forEach(l => str += printLine(l, " ", "exact"));
+          str += printLine("");
+          break;
+        case 'question_list':
+          str += HORIZONTAL_LINE + "\n";
+          const qItems = el.items || el.questions || [];
+          qItems.forEach((q: any, idx: number) => {
+             const qText = typeof q === 'string' ? q : JSON.stringify(q);
+             const qLines = wrapText(qText, PAGE_WIDTH - 8);
+             qLines.forEach((l, i) => {
+                if (i === 0) str += printLine(`[ ${idx+1} ] ${l}`);
+                else str += printLine(`      ${l}`);
+             });
+             if (!qText.includes("___")) {
+                str += printLine(`      __________________________________________________`);
+             }
+             str += printLine("");
+          });
+          str += HORIZONTAL_LINE + "\n";
+          break;
+        case 'layout_row':
+          const cols = el.columns || [];
+          str += printLine("");
+          let rowStr = "";
+          cols.forEach((col: any) => {
+             const colContent = col.content || col.text || "";
+             rowStr += `[ ${colContent.toString().substring(0, 20)} ]   `;
+          });
+          const rowBox = drawInnerBox("ROW", [rowStr.trim()]);
+          rowBox.forEach(l => str += printLine(l, " ", "exact"));
+          str += printLine("");
           break;
         case 'divider':
-          str += `${indent}------------------------------------------------------------\n`;
+          str += HORIZONTAL_LINE + "\n";
           break;
         case 'bullet_points':
         case 'bullet_list':
           const points = el.points || el.items || [];
+          str += printLine("");
           points.forEach((p: any) => {
-             str += `${indent}* ${typeof p === 'string' ? p : JSON.stringify(p)}\n`;
+             str += printLine(`* ${typeof p === 'string' ? p : JSON.stringify(p)}`);
           });
+          str += printLine("");
           break;
         case 'numbered_list':
         case 'ordered_list':
           const items = el.items || el.points || [];
+          str += printLine("");
           items.forEach((p: any, i: number) => {
-             str += `${indent}${i+1}. ${typeof p === 'string' ? p : JSON.stringify(p)}\n`;
+             str += printLine(`${i+1}. ${typeof p === 'string' ? p : JSON.stringify(p)}`);
           });
+          str += printLine("");
           break;
         case 'image_placeholder':
         case 'image':
-          str += `${indent}+----------------------------------------------------+\n`;
-          str += `${indent}| [ 🖼️ IMAGE ] ${text.substring(0, 36).padEnd(36)} |\n`;
-          str += `${indent}+----------------------------------------------------+\n`;
+          str += printLine("");
+          const imgBox = drawInnerBox("IMAGE", ["", "   [ Image Placeholder ]   ", ""]);
+          imgBox.forEach(l => str += printLine(l, " ", "exact"));
+          str += printLine("");
           break;
         case 'callout':
         case 'info_box':
         case 'note_box':
         case 'highlight_box':
-          str += `${indent}+-- [ ${el.variant ? el.variant.toUpperCase() : 'INFO'} ] ----------------------------------------\n`;
-          if (el.title) str += `${indent}| ${el.title}\n`;
-          str += `${indent}| ${text}\n`;
-          str += `${indent}+----------------------------------------------------+\n`;
+          const boxTitle = el.title || (el.variant ? el.variant.toUpperCase() : 'INFO');
+          const cLines = wrapText(text, PAGE_WIDTH - 10);
+          const iBox = drawInnerBox(boxTitle, cLines);
+          str += printLine("");
+          iBox.forEach(l => str += printLine(l, " ", "exact"));
+          str += printLine("");
           break;
         case 'multiple_choice':
-          str += `${indent}? ${text}\n`;
+          str += printLine("");
+          str += printLine(`  ${text}`);
           const opts = el.options || [];
           opts.forEach((o: any, i: number) => {
-            str += `${indent}  [${String.fromCharCode(65+i)}] ${typeof o === 'string' ? o : JSON.stringify(o)}\n`;
+            str += printLine(`   ( ) ${typeof o === 'string' ? o : JSON.stringify(o)}`);
           });
+          str += printLine("");
           break;
         case 'fill_in_the_blank':
-          str += `${indent}> ${text} _____________\n`;
+          str += printLine("");
+          str += printLine(`  ${text} ____________________`);
+          str += printLine("");
           break;
         case 'matching':
         case 'matching_column':
-          str += `${indent}[ MATCHING COLUMNS ]\n`;
+          str += printLine("");
+          str += printLine(`[ MATCHING COLUMNS ]`, " ", "center");
           const left = el.left_column || el.column_a || [];
           const right = el.right_column || el.column_b || [];
           const max = Math.max(left.length, right.length);
           for(let i=0; i<max; i++) {
              const l = left[i] ? `${i+1}. ${typeof left[i] === 'string' ? left[i] : JSON.stringify(left[i])}` : "";
-             const r = right[i] ? `[${String.fromCharCode(65+i)}] ${typeof right[i] === 'string' ? right[i] : JSON.stringify(right[i])}` : "";
-             str += `${indent}  ${l.padEnd(30)} | ${r}\n`;
+             const r = right[i] ? `( ) ${typeof right[i] === 'string' ? right[i] : JSON.stringify(right[i])}` : "";
+             str += printLine(`  ${l.substring(0, 30).padEnd(30)} | ${r.substring(0, 30)}`);
           }
+          str += printLine("");
           break;
         case 'essay':
         case 'short_answer':
-          str += `${indent}? ${text}\n`;
-          str += `${indent}  ____________________________________________________\n`;
-          str += `${indent}  ____________________________________________________\n`;
+          str += printLine("");
+          str += printLine(`  ${text}`);
+          str += printLine(`   __________________________________________________________________`);
+          str += printLine(`   __________________________________________________________________`);
+          str += printLine("");
           break;
         case 'table':
-          str += `${indent}[ TABLE ]\n`;
+          str += printLine("");
           const headers = el.headers || (el.rows?.[0] ? Object.keys(el.rows[0]) : []);
+          let tableLines = [];
           if (headers.length > 0) {
-             str += `${indent}| ` + headers.join(" | ") + " |\n";
-             str += `${indent}|` + headers.map(() => "---").join("|") + "|\n";
+             let hStr = `| ` + headers.join(" | ") + ` |`;
+             tableLines.push(hStr);
           }
           const rows = el.rows || [];
           rows.forEach((r: any) => {
              const vals = Array.isArray(r) ? r : Object.values(r);
-             str += `${indent}| ` + vals.map(v => typeof v === 'string' ? v : JSON.stringify(v)).join(" | ") + " |\n";
+             let rStr = `| ` + vals.map(v => typeof v === 'string' ? v : JSON.stringify(v)).join(" | ") + ` |`;
+             tableLines.push(rStr);
           });
+          const tblBox = drawInnerBox("TABLE", tableLines);
+          tblBox.forEach(l => str += printLine(l, " ", "exact"));
+          str += printLine("");
           break;
         case 'header_identitas':
         case 'student_identity':
         case 'identity_block':
-          str += `${indent}[ STUDENT IDENTITY ]\n`;
+          str += HORIZONTAL_LINE + "\n";
           const fields = el.fields || ['Nama', 'Kelas', 'Tanggal'];
           fields.forEach((f: string) => {
-             str += `${indent}${f.padEnd(10)}: ____________________\n`;
+             str += printLine(`${f.padEnd(10)}: ____________________`);
           });
+          str += HORIZONTAL_LINE + "\n";
           break;
         case 'footer':
         case 'footer_branding':
-          str += `${indent}------------------------------------------------------------\n`;
-          str += `${indent}${text}\n`;
+          str += HORIZONTAL_LINE + "\n";
+          str += printLine(text, " ", "center");
+          str += HORIZONTAL_LINE + "\n";
           break;
         case 'upsell_section':
         case 'upsell_area':
-          str += `${indent}============================================================\n`;
-          str += `${indent}[ UPSELL / CALL TO ACTION ]\n`;
-          if (el.elements) {
-            el.elements.forEach((child: any) => {
-               str += renderElement(child, indent + "  ");
-            });
-          }
-          str += `${indent}============================================================\n`;
+          str += HORIZONTAL_LINE + "\n";
+          str += printLine(`[ UPSELL / CALL TO ACTION ]`, " ", "center");
+          str += printLine(`Want more templates like this?`);
+          str += printLine(`Visit our website to get full access!`);
+          str += HORIZONTAL_LINE + "\n";
           break;
         default:
-          str += `${indent}[${t}] ${text}\n`;
+          str += printLine("");
+          str += printLine(`[ ${t.toUpperCase()} ] ${text}`);
+          str += printLine("");
           if (el.elements) {
             el.elements.forEach((child: any) => {
-               str += renderElement(child, indent + "  ");
+               str += renderElement(child);
             });
           }
           break;
       }
-      return str + "\n";
+      return str;
     };
-
-    if (parsed.meta) {
-      output += `[ META ]\n`;
-      output += `Page: ${parsed.meta.page_number} | Subject: ${parsed.meta.subject} | Paper: ${parsed.meta.paper_size}\n`;
-      output += `------------------------------------------------------------\n\n`;
-    }
 
     if (parsed.layout_structure) {
       parsed.layout_structure.forEach((area: any) => {
-        output += `[ AREA: ${area.area} ]\n`;
         if (area.elements) {
           area.elements.forEach((el: any) => {
-            output += renderElement(el, "  ");
+            output += renderElement(el);
           });
         }
-        output += `\n`;
       });
     }
 
@@ -1228,6 +1359,7 @@ const generateAsciiWireframe = (data: any): string => {
 export default function App() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [view, setView] = useState<"dashboard" | "generator" | "api_settings">("dashboard");
+  const [previewMode, setPreviewMode] = useState<"wireframe" | "json">("wireframe");
   const [projectId, setProjectId] = useState<string | null>(null);
   const [projects, setProjects] = useState<any[]>([]);
   const [isLoadingProjects, setIsLoadingProjects] = useState(false);
@@ -3274,6 +3406,14 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
                           </span>
                         </h3>
                         <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setPreviewMode(previewMode === 'wireframe' ? 'json' : 'wireframe')}
+                            className="flex items-center justify-center gap-2 px-3 sm:px-5 py-2.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-xl transition-all font-bold text-xs sm:text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+                            title="Toggle Preview"
+                          >
+                            <Code className="w-5 h-5 sm:w-4 sm:h-4" />
+                            <span className="hidden sm:inline">View {previewMode === 'wireframe' ? 'JSON' : 'Wireframe'}</span>
+                          </button>
                           <button 
                             onClick={() => handleGenerateSinglePage(activeTab)}
                             disabled={pageData[activeTab]?.loading}
@@ -3346,7 +3486,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
                         )}
                         <div className="absolute inset-0 overflow-auto custom-scrollbar p-6 pb-24 bg-[#0a0a0a]">
                           <pre className="text-[11px] sm:text-xs font-mono leading-relaxed text-[#39ff14] whitespace-pre-wrap break-words">
-                            {pageData[activeTab]?.data ? generateAsciiWireframe(pageData[activeTab].data) : ''}
+                            {pageData[activeTab]?.data ? (previewMode === 'wireframe' ? generateAsciiWireframe(pageData[activeTab].data) : JSON.stringify(pageData[activeTab].data, null, 2)) : ''}
                           </pre>
                         </div>
 
