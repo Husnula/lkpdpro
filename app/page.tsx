@@ -1710,8 +1710,9 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
               });
             }
 
-            // AUTO-BOOTSTRAP: Force jagofeed@gmail.com to be super-admin if not already
-            if (user.email === "jagofeed@gmail.com" && data.role !== "super-admin") {
+            // AUTO-BOOTSTRAP: Force super-admins if not already
+            const isSuperAdminEmail = ['jagofeed@gmail.com', 'jagofeedmediatama@gmail.com', 'bapakeathfar@gmail.com'].includes(user.email || "");
+            if (isSuperAdminEmail && data.role !== "super-admin") {
               await updateDoc(doc(db, "users", user.uid), { 
                 role: "super-admin", 
                 status: "active" 
@@ -1723,11 +1724,12 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
             setUserRole(data.role || "user");
             setUserStatus(data.status || "active");
           } else {
-            // If user does not exist in Firestore, only allow jagofeed@gmail.com to self-register
-            if (user.email === "jagofeed@gmail.com") {
+            // If user does not exist in Firestore, allow super-admin emails to self-register
+            const isSuperAdminEmail = ['jagofeed@gmail.com', 'jagofeedmediatama@gmail.com', 'bapakeathfar@gmail.com'].includes(user.email || "");
+            if (isSuperAdminEmail) {
               const newUser = {
                 uid: user.uid,
-                email: "jagofeed@gmail.com",
+                email: user.email,
                 role: "super-admin",
                 status: "active",
                 licenseStatus: "unlimited",
