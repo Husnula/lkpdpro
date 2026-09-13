@@ -906,7 +906,7 @@ function AgencyManager({ isDarkMode }: { isDarkMode: boolean }) {
                   <td className="px-6 py-4">
                     <select 
                       value={u.role || "user"}
-                      disabled={u.email === 'jagofeed@gmail.com'}
+                      disabled={['jagofeed@gmail.com', 'jagofeedmediatama@gmail.com', 'bapakeathfar@gmail.com'].includes(u.email || '')}
                       onChange={(e) => handleUpdateUser(u.id, { role: e.target.value })}
                       className="bg-transparent font-medium text-blue-600 dark:text-blue-400 outline-none cursor-pointer text-xs"
                     >
@@ -919,7 +919,7 @@ function AgencyManager({ isDarkMode }: { isDarkMode: boolean }) {
                   <td className="px-6 py-4">
                     <select 
                       value={u.status || "pending"}
-                      disabled={u.email === 'jagofeed@gmail.com'}
+                      disabled={['jagofeed@gmail.com', 'jagofeedmediatama@gmail.com', 'bapakeathfar@gmail.com'].includes(u.email || '')}
                       onChange={(e) => handleUpdateUser(u.id, { status: e.target.value })}
                       className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase border cursor-pointer ${
                         u.status === 'active' ? 'bg-emerald-50 border-emerald-100 text-emerald-600 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-400' : 
@@ -1409,6 +1409,8 @@ export default function App() {
     drillingMode: false,
     tipeKonten: 'STANDAR',
     sertakanCover: false,
+    sertakanGuru: true,
+    halamanGuru: 1,
     mode: 'STANDAR',
     visual: 'PLAYFUL_COLOR',
     namaGuru: '',
@@ -1802,7 +1804,8 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
 
   const fallbackSiswaPages = parseInt(String(formData.halaman)) || 1;
   const numSiswaPages = outlineText ? (outlineText.match(/^Hal \d+/gm)?.length || fallbackSiswaPages) : fallbackSiswaPages;
-  const numGuruPages = outlineText ? (outlineText.match(/^Hal Guru/gm)?.length || 0) : (formData.tipeKonten === 'MATERI' ? 0 : Math.ceil(fallbackSiswaPages / 2));
+  const fallbackGuruPages = parseInt(String(formData.halamanGuru)) || 1;
+  const numGuruPages = formData.sertakanGuru === false ? 0 : (outlineText ? (outlineText.match(/^Hal Guru/gm)?.length || 0) : fallbackGuruPages);
 
   // Modified calls using BYOK logic
   const handleSuggestMateri = async () => {
@@ -1909,7 +1912,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
         - Fase & Kelas/Tingkat: ${formData.fase} - ${formData.kelas}
         - Jumlah Halaman Siswa: ${numSiswaPages} halaman
         - Halaman Cover: ${formData.sertakanCover ? 'Halaman 1 dialokasikan khusus untuk Cover/Identitas.' : 'Tidak ada halaman cover khusus.'}
-        - Jumlah Halaman Guru: ${numGuruPages} halaman ${numGuruPages > 0 ? '(Otomatis ditambahkan di akhir untuk kunci jawaban)' : '(Tidak diperlukan karena mode Materi Saja)'}
+        - Jumlah Halaman Guru: ${numGuruPages} halaman ${numGuruPages > 0 ? '(Otomatis ditambahkan di akhir untuk kunci jawaban)' : '(Tidak diperlukan)'}
         - Mode Konten: ${
           formData.tipeKonten === 'DRILLING' || formData.drillingMode 
             ? 'DRILLING MODE AKTIF — Hanya soal latihan padat, ZERO materi teori, target kepadatan soal maksimal per halaman. Outline hanya berisi daftar soal/latihan tanpa alokasi halaman materi.' 
@@ -1932,9 +1935,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
         Hal 1 — Identitas + [Nama Aktivitas]: [deskripsi singkat]
         Hal 2 — [Nama Aktivitas]: [deskripsi singkat]
         ...
-        Hal Guru 1 — Kunci Jawaban (Hal 1-2) + Rubrik Penilaian
-        Hal Guru 2 (Jika ada) — Kunci Jawaban Lanjutan
-        Hal Upsell (Jika aktif) — Halaman Marketing & Kredit Kreator
+        ${formData.sertakanGuru !== false ? `Hal Guru 1 — Kunci Jawaban (Hal 1-2) + Rubrik Penilaian\n        Hal Guru 2 (Jika ada) — Kunci Jawaban Lanjutan\n        ` : ''}Hal Upsell (Jika aktif) — Halaman Marketing & Kredit Kreator
         
         Alokasi waktu estimasi total: ±XX menit
       `;
@@ -2986,6 +2987,40 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
                             </div>
                             {formData.sertakanCover && (
                               <span className="ml-auto text-[10px] font-bold px-2 py-1 bg-purple-500 text-white rounded-full flex-shrink-0">COVER AKTIF</span>
+                            )}
+                          </label>
+                        </div>
+
+                        <div className="col-span-12 mt-1">
+                          <label className={`flex items-center gap-3 p-3.5 border-2 rounded-xl cursor-pointer transition-all ${formData.sertakanGuru !== false ? 'border-amber-400 bg-amber-50 dark:bg-amber-900/20' : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
+                            <input
+                              type="checkbox"
+                              name="sertakanGuru"
+                              checked={formData.sertakanGuru !== false}
+                              onChange={handleChange}
+                              className="w-5 h-5 accent-amber-500 rounded"
+                            />
+                            <div className="flex flex-col">
+                              <span className={`text-sm font-bold ${formData.sertakanGuru !== false ? 'text-amber-700 dark:text-amber-400' : 'text-slate-700 dark:text-slate-200'}`}>
+                                👩‍🏫 Sertakan Halaman Guru (Kunci)
+                              </span>
+                              <span className="text-xs text-slate-500 dark:text-slate-400">
+                                Tambahkan halaman ekstra berisi kunci jawaban dan rubrik penilaian.
+                              </span>
+                            </div>
+                            {formData.sertakanGuru !== false && (
+                              <div className="ml-auto flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                <label className="text-xs font-bold text-amber-700 dark:text-amber-400">Jml Hal:</label>
+                                <input
+                                  type="number"
+                                  name="halamanGuru"
+                                  min="1"
+                                  max="10"
+                                  value={formData.halamanGuru || 1}
+                                  onChange={handleChange}
+                                  className="w-16 p-1 text-center bg-white dark:bg-slate-800 border border-amber-300 dark:border-amber-700 rounded-md outline-none text-sm font-semibold text-slate-800 dark:text-slate-200"
+                                />
+                              </div>
                             )}
                           </label>
                         </div>

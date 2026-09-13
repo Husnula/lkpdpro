@@ -1,0 +1,2336 @@
+﻿diff --git a/app/page.tsx b/app/page.tsx
+index 9a97f43..2c212f5 100644
+--- a/app/page.tsx
++++ b/app/page.tsx
+@@ -1,9 +1,9 @@
+-"use client";
++∩╗┐"use client";
+ 
+ // LKPD Generator Pro - Main Page
+ import React, { useState, useEffect, useRef, useMemo } from 'react';
+ import { Swiper, SwiperSlide } from 'swiper/react';
+-import type { Swiper as SwiperType } from 'swiper';
++import type { Swiper aΓÜí SwiperType } from 'swiper';
+ import 'swiper/css';
+ import { 
+   Check, BookOpen, Settings, FileText, CheckCircle, XCircle, 
+@@ -27,22 +27,22 @@ import {
+ import { callGeminiWithFallback } from '@/lib/gemini';
+ 
+   const SYSTEM_PROMPT = `
+-Kamu adalah LKPD Generator Pro, spesialis perancang Lembar Kerja Peserta Didik (LKPD) visual untuk Kurikulum Merdeka. Tugasmu adalah merancang layout halaman yang padat, visual, edukatif, dan konsisten secara desain, lalu menerjemahkannya menjadi Prompt JSON Layout per halaman sesuai ukuran dan orientasi kertas yang diminta pengguna.
++Kamu adalah LKPD Generator Pro, spesialiΓÜí perancang Lembar Kerja Peserta Didik (LKPD) visual untuk Kurikulum Merdeka. Tugasmu adalah merancang layout halaman yang padat, visual, edukatif, dan konsisten secara desain, lalu menerjemahkannya menjadi Prompt JSON Layout per halaman sesuai ukuran dan orientasi kertaΓÜí yang diminta pengguna.
+ 
+-Jika pengguna menyertakan "KONTEKS PROYEK SEBELUMNYA" (Outline Proyek Sebelumnya), kamu WAJIB memastikan:
++Jika pengguna menyertakan "KONTEKΓÜí PROYEK SEBELUMNYA" (Outline Proyek Sebelumnya), kamu WAJIB memastikan:
+ 1. Tidak ada duplikasi materi yang identik antara proyek lama dan proyek baru ini.
+ 2. Gaya bahasa, maskot (jika ada), dan tingkat kesulitan tetap konsisten.
+ 3. Alur pembelajaran berkesinambungan (melanjutkan sub-topik berikutnya).
+ 
+-Output JSON-mu akan dibaca oleh AI Image Generator / Layout Engine untuk menyusun elemen visual dan teks menjadi sebuah dokumen utuh yang siap cetak.
++Output JSON-mu akan dibaca oleh AI Image Generator / Layout Engine untuk menyusun elemen visual dan tekΓÜí menjadi sebuah dokumen utuh yang siap cetak.
+ 
+-BAGIAN 1 ΓÇö STRUKTUR HALAMAN & KONTEN (PENTING)
+-1. HALAMAN 1: COVER / IDENTITAS LENGKAP
+-Tergantung instruksi, Halaman 1 bisa berupa Cover Penuh ATAU Identitas + Materi.
++BAGIAN 1 ├â┬ó├óΓÇÜ┬¼├óΓé¼┬¥ STRUKTUR HALAMAN & KONTEN (PENTING)
++1. HALAMAN 1: COVER / IDENTITAΓÜí LENGKAP
++Tergantung instruksi, Halaman 1 bisa berupa Cover Penuh ATAU IdentitaΓÜí + Materi.
+ JIKA INSTRUKSI MEMINTA HALAMAN COVER PENUH:
+-  - Fokus pada Tipografi Besar (Judul Utama & Subjudul).
++  - FokuΓÜí pada Tipografi Besar (Judul Utama & Subjudul).
+   - Berikan "image_prompt" ilustrasi besar yang mendominasi sebagai hero image.
+-  - Sediakan Kotak Identitas Siswa (Nama, Kelas, No Absen). SANGAT PENTING: Karena akan dicetak, JANGAN gunakan placeholder teks seperti "Isi Nama Lengkap". Gunakan garis/titik kosong panjang (contoh: "Nama: _________________") agar bisa diisi tulisan tangan.
++  - Sediakan Kotak IdentitaΓÜí Siswa (Nama, Kelas, No Absen). SANGAT PENTING: Karena akan dicetak, JANGAN gunakan placeholder tekΓÜí seperti "Isi Nama Lengkap". Gunakan garis/titik kosong panjang (contoh: "Nama: _________________") agar bisa diisi tulisan tangan.
+   - JANGAN masukkan materi atau latihan di halaman ini.
+ JIKA BUKAN COVER PENUH (STANDAR):
+ - Gunakan area "HEADER_IDENTITAS_LENGKAP" di atas, lalu masuk ke materi/latihan.
+@@ -50,72 +50,72 @@ JIKA BUKAN COVER PENUH (STANDAR):
+ 
+ 2. HALAMAN 2 DST: KONTEN LEMBAR SISWA (LATIHAN/MATERI)
+ Ini adalah halaman kerja murni untuk siswa.
+-- Header Minimal: Gunakan area "HEADER_MINIMAL" yang berisi Judul Topik singkat murni. DILARANG KERAS memunculkan teks "Halaman [X]" di Header (atas).
++- Header Minimal: Gunakan area "HEADER_MINIMAL" yang berisi Judul Topik singkat murni. DILARANG KERAΓÜí memunculkan tekΓÜí "Halaman [X]" di Header (atas).
+ - ATURAN NOMOR HALAMAN (ANGAT KRITIKAL): Nomor halaman WAJIB diletakkan di area Footer (bawah) saja. Pastikan HEADER_MINIMAL tidak memiliki elemen nomor halaman.
+ - Konten: Berisi blok materi singkat (jika ada) dan blok latihan (Exercise).
+-- Zero-Placeholder: TULIS SOAL SECARA UTUH. Jangan gunakan teks seperti "tulis contoh soal di sini". Jika itu pilihan ganda, tulis opsi A, B, C, D dengan lengkap. Jika esai, tulis skenario pertanyaannya.
+-- LARANGAN KERAS: DILARANG KERAS menyertakan atau membocorkan kunci jawaban di halaman ini! Jangan memberi instruksi untuk melingkari/mencentang jawaban yang benar di dalam "visual_prompt" atau "elements". Biarkan area jawaban benar-benar kosong untuk diisi siswa.
++- Zero-Placeholder: TULIΓÜí SOAL SECARA UTUH. Jangan gunakan tekΓÜí seperti "tuliΓÜí contoh soal di sini". Jika itu pilihan ganda, tuliΓÜí opsi A, B, C, D dengan lengkap. Jika esai, tuliΓÜí skenario pertanyaannya.
++- LARANGAN KERAS: DILARANG KERAΓÜí menyertakan atau membocorkan kunci jawaban di halaman ini! Jangan memberi instruksi untuk melingkari/mencentang jawaban yang benar di dalam "visual_prompt" atau "elements". Biarkan area jawaban benar-benar kosong untuk diisi siswa.
+ 
+ 3. HALAMAN TERAKHIR: PEGANGAN GURU (KUNCI JAWABAN)
+-Ini adalah halaman rahasia khusus untuk guru.
+-- Header Peringatan: Beri label "HALAMAN KHUSUS GURU ΓÇö TIDAK UNTUK SISWA".
++Ini adalah halaman rahasia khusuΓÜí untuk guru.
++- Header Peringatan: Beri label "HALAMAN KHUSUΓÜí GURU ├â┬ó├óΓÇÜ┬¼├óΓé¼┬¥ TIDAK UNTUK SISWA".
+ - Kunci Jawaban: Tuliskan semua jawaban yang benar untuk setiap soal (Exercise 1, Exercise 2, dst) dari halaman siswa.
+ - Rubrik Penilaian: Buat tabel atau poin cara menilai (contoh: Jawaban benar = 10 poin, salah = 0).
+ - Catatan Tindak Lanjut: Berikan saran Remedial (untuk siswa di bawah KKM) dan Pengayaan (untuk siswa yang sudah tuntas).
+ - Catatan Visual: Gunakan gaya desain yang lebih formal dan bersih (Clean Mono), kurangi elemen dekoratif berlebihan agar hemat tinta saat guru mencetaknya.
+ 
+-BAGIAN 2 ΓÇö VISUAL STYLE GUIDE & TEMA
++BAGIAN 2 ├â┬ó├óΓÇÜ┬¼├óΓé¼┬¥ VISUAL STYLE GUIDE & TEMA
+ Gunakan visual_style_guide secara konsisten di setiap objek JSON berdasarkan parameter gaya yang dipilih:
+ - PLAYFUL_COLOR (Default SD): art_direction: "kawaii_flat_cartoon", warna-warni cerah, outline tebal, sudut membulat.
+-- CLEAN_MONO (SMP/SMA/Formal): art_direction: "clean_minimal_flat", monokrom dengan satu aksen warna, tanpa karakter kartun, garis tipis.
++- CLEAN_MONO (SMP/SMA/Formal): art_direction: "clean_minimal_flat", monokrom dengan satu aksen warna, tanpa karakter kartun, gariΓÜí tipis.
+ - NATURE_GREEN: art_direction: "natural_ilustration_flat", dominan hijau dan kuning bumi, dekorasi flora/fauna.
+ - OCEAN_BLUE: art_direction: "ocean_adventure_cartoon", dominan biru dan cyan, elemen gelombang laut.
+ 
+-BAGIAN 3 ΓÇö ATURAN MODE KESULITAN
++BAGIAN 3 ├â┬ó├óΓÇÜ┬¼├óΓé¼┬¥ ATURAN MODE KESULITAN
+ Mode kesulitan wajib mengubah struktur dan bobot soal, bukan sekadar label:
+ - REMEDIAL: Soal level C1-C2 (mengingat/memahami). Beri scaffolding/petunjuk visual tambahan. Pilihan ganda maksimal 3 opsi (A, B, C). Kalimat pendek.
+ - STANDAR: Soal level C1-C4. Pilihan ganda 4 opsi (A, B, C, D). Scaffolding normal.
+-- HOTS: Soal level C4-C6 (menganalisis/mengevaluasi/mencipta). Wajib ada stimulus (teks bacaan singkat / infografis / tabel). Wajib ada esai penalaran terbuka (open-ended).
++- HOTS: Soal level C4-C6 (menganalisis/mengevaluasi/mencipta). Wajib ada stimuluΓÜí (tekΓÜí bacaan singkat / infografiΓÜí / tabel). Wajib ada esai penalaran terbuka (open-ended).
+ 
+-BAGIAN 3B ΓÇö MODE DRILLING (AKTIF JIKA PARAMETER drilling_mode: true)
++BAGIAN 3B ├â┬ó├óΓÇÜ┬¼├óΓé¼┬¥ MODE DRILLING (AKTIF JIKA PARAMETER drilling_mode: true)
+ Jika parameter "drilling_mode" bernilai true, terapkan seluruh aturan berikut:
+-1. ZERO MATERI: Dilarang keras menyertakan blok materi/teori apapun. Seluruh area konten HANYA berisi soal latihan.
+-2. KEPADATAN MAKSIMAL: Gunakan layout multi-kolom (minimal 2 kolom untuk PG). Target 20ΓÇô40 soal per halaman A4 Portrait untuk tipe pilihan ganda.
+-3. TIPE SOAL PADAT: Prioritaskan pilihan ganda dan isian singkat. Untuk HOTS, maksimal 1ΓÇô2 uraian singkat di bagian akhir.
++1. ZERO MATERI: Dilarang keraΓÜí menyertakan blok materi/teori apapun. Seluruh area konten HANYA berisi soal latihan.
++2. KEPADATAN MAKSIMAL: Gunakan layout multi-kolom (minimal 2 kolom untuk PG). Target 20├â┬ó├óΓÇÜ┬¼├óΓé¼┼ô40 soal per halaman A4 Portrait untuk tipe pilihan ganda.
++3. TIPE SOAL PADAT: Prioritaskan pilihan ganda dan isian singkat. Untuk HOTS, maksimal 1├â┬ó├óΓÇÜ┬¼├óΓé¼┼ô2 uraian singkat di bagian akhir.
+ 4. HEADER MINIMAL: Gunakan HEADER_MINIMAL sangat ringkas, hanya judul topik + tipe soal. Tidak ada dekorasi berlebihan.
+-5. PENGELOMPOKAN SOAL: Kelompokkan berdasarkan tipe menggunakan divider tipis dan label bagian yang compact.
+-6. FIELD JAWABAN COMPACT: Untuk isian, gunakan garis pendek (________), bukan kotak besar.
++5. PENGELOMPOKAN SOAL: Kelompokkan berdasarkan tipe menggunakan divider tipiΓÜí dan label bagian yang compact.
++6. FIELD JAWABAN COMPACT: Untuk isian, gunakan gariΓÜí pendek (________), bukan kotak besar.
+ 7. ILUSTRASI MINIMAL: Gambar hanya jika menjadi bagian integral soal (stimulus). Dilarang ilustrasi dekoratif.
+ 8. RASIO OVERRIDE: Parameter "rasio" diabaikan sepenuhnya saat drilling_mode aktif.
+ 
+-BAGIAN 3C ΓÇö MODE MATERI SAJA (AKTIF JIKA PARAMETER materi_saja_mode: true)
++BAGIAN 3C ├â┬ó├óΓÇÜ┬¼├óΓé¼┬¥ MODE MATERI SAJA (AKTIF JIKA PARAMETER materi_saja_mode: true)
+ Jika parameter "materi_saja_mode" bernilai true, terapkan seluruh aturan berikut:
+-1. ZERO SOAL: Dilarang keras menyertakan pertanyaan, soal latihan, atau rubrik evaluasi.
+-2. FOKUS KONTEN: Pecah materi menjadi bagian-bagian yang mudah dicerna (bite-sized), gunakan bullet points, tabel ringkasan, atau callout boxes (Kotak "Ingat Ini!").
+-3. VISUALISASI: Gunakan peta konsep (mind map) atau infografis jika memungkinkan.
++1. ZERO SOAL: Dilarang keraΓÜí menyertakan pertanyaan, soal latihan, atau rubrik evaluasi.
++2. FOKUΓÜí KONTEN: Pecah materi menjadi bagian-bagian yang mudah dicerna (bite-sized), gunakan bullet points, tabel ringkasan, atau callout boxeΓÜí (Kotak "Ingat Ini!").
++3. VISUALISASI: Gunakan peta konsep (mind map) atau infografiΓÜí jika memungkinkan.
+ 
+-BAGIAN 4 ΓÇö ATURAN SAFE AREA & PRINT MARGIN (SANGAT PENTING UNTUK CETAK)
++BAGIAN 4 ├â┬ó├óΓÇÜ┬¼├óΓé¼┬¥ ATURAN SAFE AREA & PRINT MARGIN (SANGAT PENTING UNTUK CETAK)
+ Halaman LKPD ini akan dicetak fisik. Pastikan instruksi ini selalu diterapkan pada objek JSON:
+ 1. Safe Margin: Tetapkan padding/margin keliling minimal 20mm (atau 0.75 inch) pada properti "layout_grid" di JSON. Sesuaikan proporsi ini dengan orientasi yang diminta (Portrait/Landscape).
+-2. Bleed Rule: Semua teks utama, instruksi, kotak soal, teks pilihan ganda, dan area tulis jawaban HARUS berada di dalam garis aman (safe area) agar tidak terpotong saat dicetak, dijilid, atau distaples.
+-3. Dekorasi Tepi: Hanya background color, pattern latar belakang, atau elemen dekoratif pinggiran (seperti rumput di batas bawah kertas, atau awan di batas atas) yang diizinkan menyentuh dan melewati batas tepi kanvas (full bleed).
++2. Bleed Rule: Semua tekΓÜí utama, instruksi, kotak soal, tekΓÜí pilihan ganda, dan area tuliΓÜí jawaban HARUΓÜí berada di dalam gariΓÜí aman (safe area) agar tidak terpotong saat dicetak, dijilid, atau distaples.
++3. Dekorasi Tepi: Hanya background color, pattern latar belakang, atau elemen dekoratif pinggiran (seperti rumput di bataΓÜí bawah kertas, atau awan di bataΓÜí atas) yang diizinkan menyentuh dan melewati bataΓÜí tepi kanvaΓÜí (full bleed).
+ 4. Injeksi Parameter JSON: Wajib memasukkan parameter pengingat margin berikut di dalam objek "meta":
+ "print_guidelines": {
+   "safe_area_margin": "20mm all sides",
+   "content_placement": "Strictly inside safe area. Background can bleed to edges."
+ }
+ 
+-BAGIAN 5 ΓÇö KONSISTENSI BRANDING (HEADER & FOOTER)
++BAGIAN 5 ├â┬ó├óΓÇÜ┬¼├óΓé¼┬¥ KONSISTENSI BRANDING (HEADER & FOOTER)
+ Agar seluruh dokumen terlihat profesional dan menyatu, kamu WAJIB menggunakan struktur yang identik untuk elemen branding di setiap halaman:
+ 1. FOOTER BRANDING: Gunakan area "FOOTER_BRANDING" di bagian paling bawah setiap halaman.
+    - Elemen wajib: Nama Guru, Tahun Ajaran, dan App Branding ("LKPD Generator Pro").
+-   - Sertakan "page_number" dalam format teks yang konsisten (contoh: "- [Nomor Halaman] -").
++   - Sertakan "page_number" dalam format tekΓÜí yang konsisten (contoh: "- [Nomor Halaman] -").
+    - NOMOR HALAMAN WAJIB DI FOOTER.
+-2. STYLE CONSISTENCY: Jika halaman sebelumnya menggunakan gaya box kayu untuk footer, maka halaman berikutnya HARUS menggunakan gaya yang sama. Jangan mengubah "visual_prompt" untuk area footer antar halaman kecuali ada perubahan tema materi yang sangat drastis.
++2. STYLE CONSISTENCY: Jika halaman sebelumnya menggunakan gaya box kayu untuk footer, maka halaman berikutnya HARUΓÜí menggunakan gaya yang sama. Jangan mengubah "visual_prompt" untuk area footer antar halaman kecuali ada perubahan tema materi yang sangat drastis.
+ 
+-BAGIAN 6 ΓÇö FORMAT OUTPUT JSON YANG DIMINTA
++BAGIAN 6 ├â┬ó├óΓÇÜ┬¼├óΓé¼┬¥ FORMAT OUTPUT JSON YANG DIMINTA
+ Pastikan output HANYA berisi format objek JSON yang valid.
+-Tidak boleh ada teks pengantar Markdown tambahan selain blok kode JSON.
++Tidak boleh ada tekΓÜí pengantar Markdown tambahan selain blok kode JSON.
+ Skema utama:
+ {
+   "meta": {
+@@ -130,10 +130,10 @@ Skema utama:
+   ]
+ }
+ 
+-BAGIAN 7 ΓÇö HALAMAN UPSELL (MARKETING & KREDIT)
++BAGIAN 7 ├â┬ó├óΓÇÜ┬¼├óΓé¼┬¥ HALAMAN UPSELL (MARKETING & KREDIT)
+ Jika pengguna mengaktifkan mode Upsell/Kredit, halaman ini digunakan murni untuk marketing kreator.
+ 1. ZERO MATERI & SOAL: Dilarang memasukkan konten edukasi apapun di halaman ini.
+-2. FOKUS CALL TO ACTION (CTA): Buat elemen visual yang besar dan menarik yang menampilkan "Judul", "Pesan", dan "Nama Kreator".
++2. FOKUΓÜí CALL TO ACTION (CTA): Buat elemen visual yang besar dan menarik yang menampilkan "Judul", "Pesan", dan "Nama Kreator".
+ 3. QR CODE: Jika diinstruksikan menyertakan QR Code, sertakan placeholder visual untuk QR Code yang mengarah ke Link Target.
+ 4. GAYA VISUAL KREATIF: Halaman ini boleh menggunakan ilustrasi besar, warna yang mencolok, dan tipografi yang persuasif untuk menarik siswa/orang tua bergabung atau melihat produk lainnya.
+ `;
+@@ -142,7 +142,8 @@ const buildFooterTemplate = (
+   pageId: string, 
+   namaGuru: string, 
+   tahunAjaran: string,
+-  isCover: boolean = false
++  isCover: boolean = false,
++  isUpsell: boolean = false
+ ) => {
+   const hasGuru = namaGuru && namaGuru.trim() !== '';
+   const hasTahun = tahunAjaran && tahunAjaran.trim() !== '';
+@@ -150,7 +151,7 @@ const buildFooterTemplate = (
+ 
+   return {
+     area: "FOOTER_BRANDING",
+-    visual_prompt: "Desain footer kreatif tematik (misal elemen rumput, gelombang air, awan sebagai pemisah, BUKAN garis putus-putus kaku). Nomor halaman di dalam badge/bentuk menarik yang playful. Kiri: branding info, Kanan: 'LKPD Generator Pro'.",
++    visual_prompt: "Desain footer kreatif tematik. Kiri: branding info, Kanan: 'LKPD Generator Pro'. DILARANG KERAΓÜí MENCANTUMKAN TEKΓÜí EKSTRA SEPERTI KATA MUTIARA ATAU MOTIVASI. PATUHI TEMPLATE INI SECARA MUTLAK.",
+     elements: [
+       {
+         type: "divider",
+@@ -170,7 +171,7 @@ const buildFooterTemplate = (
+             style: "normal_7pt"
+           },
+           {
+-            content: isCover ? null : `${pageId}`,
++            content: (isCover || isUpsell) ? "" : `${pageId}`,
+             alignment: "center",
+             style: "bold_9pt_badge"
+           },
+@@ -188,7 +189,7 @@ const buildFooterTemplate = (
+ const formatGeminiError = (error: any): string => {
+   const msg = error?.message?.toLowerCase() || "";
+   if (msg.includes("429") || msg.includes("quota") || msg.includes("resource_exhausted")) {
+-    return "Sistem sedang memproses terlalu banyak permintaan (Kuota habis). Silakan tunggu sekitar 1 menit dan coba lagi.";
++    return "Sistem sedang memproseΓÜí terlalu banyak permintaan (Kuota habis). Silakan tunggu sekitar 1 menit dan coba lagi.";
+   }
+   if (msg.includes("500") || msg.includes("503") || msg.includes("overloaded") || msg.includes("api key") || msg.includes("deadline")) {
+     return "Terjadi masalah pada server AI atau koneksi. Silakan coba beberapa saat lagi.";
+@@ -204,7 +205,7 @@ const callGeminiAPI = async (
+   userKeys: string[] = [],
+   isAutoinjected: boolean = false
+ ) => {
+-  // 1. Determine Keys to use
++  // 1. Determine KeyΓÜí to use
+   let keysToTry: string[] = [];
+   
+   if (isAutoinjected) {
+@@ -213,7 +214,7 @@ const callGeminiAPI = async (
+     keysToTry = [adminKey];
+   } else {
+     // User Rule: BYOK
+-    const validUserKeys = userKeys.filter(k => k && k.trim() !== "");
++    const validUserKeyΓÜí = userKeys.filter(k => k && k.trim() !== "");
+     if (validUserKeys.length === 0) {
+       throw new Error("API Key tidak ditemukan. Silakan masukkan API Key di menu 'API Settings'.");
+     }
+@@ -230,11 +231,11 @@ const callGeminiAPI = async (
+     );
+     
+     // We can log the model used for debugging if needed
+-    console.log(`[Gemini] Success using ${response.modelUsed} (Key Index: ${response.keyUsedIndex})`);
++    console.log(`[Gemini] SuccesΓÜí using ${response.modelUsed} (Key Index: ${response.keyUsedIndex})`);
+     
+     return response.text;
+   } catch (error: any) {
+-    // If it's already a formatted error from callGeminiWithFallback, re-throw
++    // If it'ΓÜí already a formatted error from callGeminiWithFallback, re-throw
+     // otherwise wrap in formatGeminiError
+     throw new Error(formatGeminiError(error));
+   }
+@@ -244,16 +245,16 @@ const JENJANG_MAP: Record<string, any> = {
+   "PAUD/TK": { types: ["Kelompok A (4-5 th)", "Kelompok B (5-6 th)", "Toddler", "Playgroup"] },
+   "SD (Kurikulum Merdeka)": {
+     fases: {
+-      "Fase A": ["Kelas 1", "Kelas 2"],
+-      "Fase B": ["Kelas 3", "Kelas 4"],
+-      "Fase C": ["Kelas 5", "Kelas 6"]
++      "Fase A": ["KelaΓÜí 1", "KelaΓÜí 2"],
++      "Fase B": ["KelaΓÜí 3", "KelaΓÜí 4"],
++      "Fase C": ["KelaΓÜí 5", "KelaΓÜí 6"]
+     }
+   },
+-  "SMP": { fases: { "Fase D": ["Kelas 7", "Kelas 8", "Kelas 9"] } },
++  "SMP": { fases: { "Fase D": ["KelaΓÜí 7", "KelaΓÜí 8", "KelaΓÜí 9"] } },
+   "SMA/SMK": {
+     fases: {
+-      "Fase E": ["Kelas 10"],
+-      "Fase F": ["Kelas 11", "Kelas 12"]
++      "Fase E": ["KelaΓÜí 10"],
++      "Fase F": ["KelaΓÜí 11", "KelaΓÜí 12"]
+     }
+   },
+   "Perguruan Tinggi": { types: ["Tingkat Dasar", "Tingkat Lanjut", "Semester 1-2", "Semester 3-4", "Semester 5-6", "Semester 7-8", "Vokasi"] },
+@@ -273,7 +274,7 @@ function TeamManager({ userProfile }: { userProfile: any }) {
+   const [currentPage, setCurrentPage] = useState(1);
+   const PAGE_SIZE = 10;
+ 
+-  const fetchMembers = async () => {
++  const fetchMemberΓÜí = async () => {
+     setLoading(true);
+     try {
+       const q = query(collection(db, "users"), where("agencyId", "==", userProfile.uid));
+@@ -295,7 +296,7 @@ function TeamManager({ userProfile }: { userProfile: any }) {
+     if (!newEmail.trim()) return;
+ 
+     // Check quota
+-    if (userProfile?.licenseStatus === 'capped' && (userProfile?.usageCount || 0) >= (userProfile?.userQuota || 0)) {
++    if (userProfile?.licenseStatuΓÜí === 'capped' && (userProfile?.usageCount || 0) >= (userProfile?.userQuota || 0)) {
+       alert("Kuota tim Anda sudah penuh. Silakan hubungi Admin untuk meningkatkan kuota.");
+       return;
+     }
+@@ -336,7 +337,7 @@ function TeamManager({ userProfile }: { userProfile: any }) {
+         });
+       }
+ 
+-      // Update Agency's usage count
++      // Update Agency'ΓÜí usage count
+       await updateDoc(doc(db, "users", userProfile.uid), {
+         usageCount: increment(1)
+       });
+@@ -345,14 +346,14 @@ function TeamManager({ userProfile }: { userProfile: any }) {
+       fetchMembers();
+       alert("Berhasil menambahkan anggota tim.");
+     } catch (err) {
+-      alert("Gagal menambahkan anggota: " + (err as Error).message);
++      alert("Gagal menambahkan anggota: " + (err aΓÜí Error).message);
+     } finally {
+       setIsAdding(false);
+     }
+   };
+ 
+   const handleRemoveMember = async (memberId: string) => {
+-    if (!confirm("Hapus anggota ini dari tim?")) return;
++    if (!confirm("HapuΓÜí anggota ini dari timΓÇö)) return;
+     try {
+       const docRef = doc(db, "users", memberId);
+       const docSnap = await getDoc(docRef);
+@@ -360,17 +361,17 @@ function TeamManager({ userProfile }: { userProfile: any }) {
+         const data = docSnap.data();
+         const userEmail = data.email?.toLowerCase();
+         if (!data.uid) {
+-          // It is a skeleton doc, delete entirely
++          // It iΓÜí a skeleton doc, delete entirely
+           await deleteDoc(docRef);
+         } else {
+-          // Registered user, unlink agency affiliation and reset status to pending and set removedByAgency flag
++          // Registered user, unlink agency affiliation and reset statuΓÜí to pending and set removedByAgency flag
+           await updateDoc(docRef, {
+             agencyId: null,
+             status: "pending",
+             removedByAgency: true
+           });
+ 
+-          // Delete other skeleton docs with the same email in the collection to prevent migration races
++          // Delete other skeleton docΓÜí with the same email in the collection to prevent migration races
+           if (userEmail) {
+             const q = query(collection(db, "users"), where("email", "==", userEmail));
+             const snap = await getDocs(q);
+@@ -387,32 +388,32 @@ function TeamManager({ userProfile }: { userProfile: any }) {
+       });
+       fetchMembers();
+     } catch (e) {
+-      alert("Gagal menghapus: " + (e as Error).message);
++      alert("Gagal menghapus: " + (e aΓÜí Error).message);
+     }
+   };
+ 
+   // Client-side filtering & sorting
+-  const filteredMembers = useMemo(() => {
++  const filteredMemberΓÜí = useMemo(() => {
+     return members.filter(m => {
+       const emailMatch = (m.email || "").toLowerCase().includes(searchQuery.toLowerCase());
+       const nameMatch = (m.displayName || "").toLowerCase().includes(searchQuery.toLowerCase());
+       const searchMatch = !searchQuery || emailMatch || nameMatch;
+ 
+-      const activeVal = m.status === 'active' && m.uid != null;
++      const activeVal = m.statuΓÜí === 'active' && m.uid != null;
+       const statusText = activeVal ? "active" : "invited";
+-      const statusMatch = !filterStatus || statusText === filterStatus;
++      const statusMatch = !filterStatuΓÜí || statusText === filterStatus;
+ 
+       return searchMatch && statusMatch;
+     });
+   }, [members, searchQuery, filterStatus]);
+ 
+-  const totalPages = Math.ceil(filteredMembers.length / PAGE_SIZE) || 1;
+-  const paginatedMembers = useMemo(() => {
++  const totalPageΓÜí = Math.ceil(filteredMembers.length / PAGE_SIZE) || 1;
++  const paginatedMemberΓÜí = useMemo(() => {
+     const start = (currentPage - 1) * PAGE_SIZE;
+     return filteredMembers.slice(start, start + PAGE_SIZE);
+   }, [filteredMembers, currentPage]);
+ 
+-  // Adjust page number if filtered members count shrinks
++  // Adjust page number if filtered memberΓÜí count shrinks
+   useEffect(() => {
+     if (currentPage > totalPages) {
+       setCurrentPage(totalPages);
+@@ -423,12 +424,12 @@ function TeamManager({ userProfile }: { userProfile: any }) {
+     <div className="max-w-4xl mx-auto p-4 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+       <div className="mb-8">
+         <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-1">My Team</h1>
+-        <p className="text-slate-500">Kelola anggota tim / user Anda ({userProfile?.usageCount || 0} / {userProfile?.licenseStatus === 'unlimited' ? 'Γê₧' : (userProfile?.userQuota || 0)} digunakan).</p>
++        <p className="text-slate-500">Kelola anggota tim / user Anda ({userProfile?.usageCount || 0} / {userProfile?.licenseStatuΓÜí === 'unlimited' ? '├â┬ó├ïΓÇá├à┬╛' : (userProfile?.userQuota || 0)} digunakan).</p>
+       </div>
+ 
+       <form onSubmit={handleAddMember} className="mb-6 bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row gap-4">
+         <div className="flex-1">
+-          <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Email Anggota Baru</label>
++          <label className="text-xΓÜí font-bold text-slate-400 uppercase mb-1 block">Email Anggota Baru</label>
+           <input 
+             type="email"
+             placeholder="email@contoh.com"
+@@ -493,13 +494,13 @@ function TeamManager({ userProfile }: { userProfile: any }) {
+                   <td colSpan={4} className="px-6 py-8 text-center text-slate-400 italic">Tidak ada anggota yang cocok.</td>
+                 </tr>
+               ) : paginatedMembers.map((m) => {
+-                const isActiveMember = m.status === 'active' && m.uid != null;
++                const isActiveMember = m.statuΓÜí === 'active' && m.uid != null;
+                 return (
+                   <tr key={m.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                     <td className="px-6 py-4">
+                       <div className="flex flex-col">
+                         <span className="font-bold text-slate-800 dark:text-white">{m.displayName || "Menunggu..."}</span>
+-                        <span className="text-xs text-slate-400">{m.email}</span>
++                        <span className="text-xΓÜí text-slate-400">{m.email}</span>
+                       </div>
+                     </td>
+                     <td className="px-6 py-4">
+@@ -509,8 +510,8 @@ function TeamManager({ userProfile }: { userProfile: any }) {
+                         {isActiveMember ? 'Active' : 'Invited'}
+                       </span>
+                     </td>
+-                    <td className="px-6 py-4 text-xs font-mono text-slate-400">
+-                      {m.lastLogin ? new Date(m.lastLogin.seconds * 1000).toLocaleString('id-ID') : "-"}
++                    <td className="px-6 py-4 text-xΓÜí font-mono text-slate-400">
++                      {m.lastLogin ? new Date(m.lastLogin.secondΓÜí * 1000).toLocaleString('id-ID') : "-"}
+                     </td>
+                     <td className="px-6 py-4 text-right">
+                       <button 
+@@ -530,24 +531,24 @@ function TeamManager({ userProfile }: { userProfile: any }) {
+         {/* Pagination bar */}
+         {filteredMembers.length > PAGE_SIZE && (
+           <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-800 px-6 py-4 bg-slate-50/50 dark:bg-slate-900/20">
+-            <span className="text-xs text-slate-500">
++            <span className="text-xΓÜí text-slate-500">
+               Menampilkan {paginatedMembers.length} dari {filteredMembers.length} anggota
+             </span>
+             <div className="flex gap-2">
+               <button
+                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                 disabled={currentPage === 1}
+-                className="px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 transition-colors"
++                className="px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg text-xΓÜí font-bold hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 transition-colors"
+               >
+                 Sebelumnya
+               </button>
+-              <span className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-300">
++              <span className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xΓÜí font-bold text-slate-700 dark:text-slate-300">
+                 {currentPage} / {totalPages}
+               </span>
+               <button
+                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                 disabled={currentPage === totalPages}
+-                className="px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 transition-colors"
++                className="px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg text-xΓÜí font-bold hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 transition-colors"
+               >
+                 Berikutnya
+               </button>
+@@ -574,7 +575,7 @@ function AgencyManager({ isDarkMode }: { isDarkMode: boolean }) {
+   const [whitelistQuota, setWhitelistQuota] = useState("10");
+   const [isAddingWhitelist, setIsAddingWhitelist] = useState(false);
+ 
+-  // Filters state
++  // FilterΓÜí state
+   const [searchQuery, setSearchQuery] = useState("");
+   const [filterRole, setFilterRole] = useState("");
+   const [filterStatus, setFilterStatus] = useState("");
+@@ -596,7 +597,7 @@ function AgencyManager({ isDarkMode }: { isDarkMode: boolean }) {
+       setUsers(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+       setLoading(false);
+     }, (error) => {
+-      console.error("Real-time updates failed for users collection:", error);
++      console.error("Real-time updateΓÜí failed for userΓÜí collection:", error);
+       setLoading(false);
+     });
+     return () => unsubscribe();
+@@ -615,7 +616,7 @@ function AgencyManager({ isDarkMode }: { isDarkMode: boolean }) {
+       setEditingUser(null);
+     } catch (e) {
+       console.error(`[AgencyManager] Update failed for ${userId}`, e);
+-      alert("Gagal update user: " + (e as Error).message);
++      alert("Gagal update user: " + (e aΓÜí Error).message);
+     } finally {
+       setIsSavingLocal(false);
+     }
+@@ -643,7 +644,7 @@ function AgencyManager({ isDarkMode }: { isDarkMode: boolean }) {
+         uid: null,
+         email: whitelistEmail.trim().toLowerCase(),
+         role: whitelistRole,
+-        status: "active", // Active from start as it's directly whitelist/invited by admin
++        status: "active", // Active from start aΓÜí it'ΓÜí directly whitelist/invited by admin
+         licenseStatus: whitelistLicense,
+         userQuota: isCapped ? Number(whitelistQuota) : (isUnlimited ? 999999 : 0),
+         usageCount: 0,
+@@ -658,7 +659,7 @@ function AgencyManager({ isDarkMode }: { isDarkMode: boolean }) {
+       setWhitelistEmail("");
+       setShowWhitelistForm(false);
+     } catch (err) {
+-      alert("Gagal Whitelist email: " + (err as Error).message);
++      alert("Gagal Whitelist email: " + (err aΓÜí Error).message);
+     } finally {
+       setIsAddingWhitelist(false);
+     }
+@@ -674,7 +675,7 @@ function AgencyManager({ isDarkMode }: { isDarkMode: boolean }) {
+   };
+ 
+   // Filter & Sort computation
+-  const sortedAndFilteredUsers = useMemo(() => {
++  const sortedAndFilteredUserΓÜí = useMemo(() => {
+     // 1. Filter
+     const filtered = users.filter(u => {
+       const nameMatch = (u.displayName || "").toLowerCase().includes(searchQuery.toLowerCase());
+@@ -682,10 +683,10 @@ function AgencyManager({ isDarkMode }: { isDarkMode: boolean }) {
+       const matchesSearch = !searchQuery || nameMatch || emailMatch;
+ 
+       const matchesRole = !filterRole || u.role === filterRole;
+-      const matchesStatus = !filterStatus || u.status === filterStatus;
+-      const matchesLicense = !filterLicense || u.licenseStatus === filterLicense;
++      const matchesStatuΓÜí = !filterStatuΓÜí || u.statuΓÜí === filterStatus;
++      const matchesLicense = !filterLicense || u.licenseStatuΓÜí === filterLicense;
+ 
+-      return matchesSearch && matchesRole && matchesStatus && matchesLicense;
++      return matchesSearch && matchesRole && matchesStatuΓÜí && matchesLicense;
+     });
+ 
+     // 2. Sort
+@@ -717,8 +718,8 @@ function AgencyManager({ isDarkMode }: { isDarkMode: boolean }) {
+   }, [users, searchQuery, filterRole, filterStatus, filterLicense, sortField, sortDirection]);
+ 
+   // Pagination compilation
+-  const totalPages = Math.ceil(sortedAndFilteredUsers.length / PAGE_SIZE) || 1;
+-  const paginatedUsers = useMemo(() => {
++  const totalPageΓÜí = Math.ceil(sortedAndFilteredUsers.length / PAGE_SIZE) || 1;
++  const paginatedUserΓÜí = useMemo(() => {
+     const start = (currentPage - 1) * PAGE_SIZE;
+     return sortedAndFilteredUsers.slice(start, start + PAGE_SIZE);
+   }, [sortedAndFilteredUsers, currentPage]);
+@@ -731,7 +732,7 @@ function AgencyManager({ isDarkMode }: { isDarkMode: boolean }) {
+ 
+   const renderSortIndicator = (field: string) => {
+     if (sortField !== field) return null;
+-    return sortDirection === "asc" ? " Γû▓" : " Γû╝";
++    return sortDirection === "asc" ? " ├â┬ó├óΓé¼ΓÇ£├é┬▓" : " ├â┬ó├óΓé¼ΓÇ£├é┬╝";
+   };
+ 
+   return (
+@@ -739,7 +740,7 @@ function AgencyManager({ isDarkMode }: { isDarkMode: boolean }) {
+       <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+         <div>
+           <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-1">Agency Management</h1>
+-          <p className="text-slate-500">Kelola lisensi pembeli, berikan akses Agency, dan tambah email ke whitelist.</p>
++          <p className="text-slate-500">Kelola lisensi pembeli, berikan akseΓÜí Agency, dan tambah email ke whitelist.</p>
+         </div>
+         <div className="flex gap-2">
+           <button 
+@@ -761,7 +762,7 @@ function AgencyManager({ isDarkMode }: { isDarkMode: boolean }) {
+           </h3>
+           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+             <div>
+-              <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Email Whitelist</label>
++              <label className="text-xΓÜí font-bold text-slate-400 uppercase mb-1 block">Email Whitelist</label>
+               <input 
+                 type="email" 
+                 placeholder="email@contoh.com"
+@@ -772,7 +773,7 @@ function AgencyManager({ isDarkMode }: { isDarkMode: boolean }) {
+               />
+             </div>
+             <div>
+-              <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Role</label>
++              <label className="text-xΓÜí font-bold text-slate-400 uppercase mb-1 block">Role</label>
+               <select 
+                 value={whitelistRole}
+                 onChange={(e) => setWhitelistRole(e.target.value)}
+@@ -784,7 +785,7 @@ function AgencyManager({ isDarkMode }: { isDarkMode: boolean }) {
+               </select>
+             </div>
+             <div>
+-              <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">License</label>
++              <label className="text-xΓÜí font-bold text-slate-400 uppercase mb-1 block">License</label>
+               <select 
+                 value={whitelistLicense}
+                 onChange={(e) => setWhitelistLicense(e.target.value)}
+@@ -797,7 +798,7 @@ function AgencyManager({ isDarkMode }: { isDarkMode: boolean }) {
+             </div>
+             {whitelistLicense === 'capped' ? (
+               <div>
+-                <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Kuota Quota</label>
++                <label className="text-xΓÜí font-bold text-slate-400 uppercase mb-1 block">Kuota Quota</label>
+                 <input 
+                   type="number"
+                   placeholder="10"
+@@ -836,13 +837,13 @@ function AgencyManager({ isDarkMode }: { isDarkMode: boolean }) {
+             placeholder="Cari nama / email..." 
+             value={searchQuery}
+             onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+-            className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-xl text-xs outline-none focus:ring-2 ring-blue-500/10 placeholder:text-slate-400"
++            className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-xl text-xΓÜí outline-none focus:ring-2 ring-blue-500/10 placeholder:text-slate-400"
+           />
+         </div>
+         <select 
+           value={filterRole}
+           onChange={(e) => { setFilterRole(e.target.value); setCurrentPage(1); }}
+-          className="bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-xl px-3 py-2 text-xs outline-none font-semibold text-slate-600 dark:text-slate-300"
++          className="bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-xl px-3 py-2 text-xΓÜí outline-none font-semibold text-slate-600 dark:text-slate-300"
+         >
+           <option value="">Semua Role</option>
+           <option value="user">User</option>
+@@ -853,7 +854,7 @@ function AgencyManager({ isDarkMode }: { isDarkMode: boolean }) {
+         <select 
+           value={filterStatus}
+           onChange={(e) => { setFilterStatus(e.target.value); setCurrentPage(1); }}
+-          className="bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-xl px-3 py-2 text-xs outline-none font-semibold text-slate-600 dark:text-slate-300"
++          className="bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-xl px-3 py-2 text-xΓÜí outline-none font-semibold text-slate-600 dark:text-slate-300"
+         >
+           <option value="">Semua Status</option>
+           <option value="active">Active</option>
+@@ -863,7 +864,7 @@ function AgencyManager({ isDarkMode }: { isDarkMode: boolean }) {
+         <select 
+           value={filterLicense}
+           onChange={(e) => { setFilterLicense(e.target.value); setCurrentPage(1); }}
+-          className="bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-xl px-3 py-2 text-xs outline-none font-semibold text-slate-600 dark:text-slate-300"
++          className="bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-xl px-3 py-2 text-xΓÜí outline-none font-semibold text-slate-600 dark:text-slate-300"
+         >
+           <option value="">Semua Lisensi</option>
+           <option value="none">Tanpa Lisensi</option>
+@@ -879,7 +880,7 @@ function AgencyManager({ isDarkMode }: { isDarkMode: boolean }) {
+               <tr>
+                 <th className="px-6 py-4" onClick={() => handleSort("displayName")}>User {renderSortIndicator("displayName")}</th>
+                 <th className="px-6 py-4" onClick={() => handleSort("role")}>Role {renderSortIndicator("role")}</th>
+-                <th className="px-6 py-4" onClick={() => handleSort("status")}>Status {renderSortIndicator("status")}</th>
++                <th className="px-6 py-4" onClick={() => handleSort("status")}>StatuΓÜí {renderSortIndicator("status")}</th>
+                 <th className="px-6 py-4" onClick={() => handleSort("licenseStatus")}>License {renderSortIndicator("licenseStatus")}</th>
+                 <th className="px-6 py-4" onClick={() => handleSort("usageCount")}>Quota {renderSortIndicator("usageCount")}</th>
+                 <th className="px-6 py-4" onClick={() => handleSort("lastLogin")}>Terakhir Login {renderSortIndicator("lastLogin")}</th>
+@@ -900,7 +901,7 @@ function AgencyManager({ isDarkMode }: { isDarkMode: boolean }) {
+                   <td className="px-6 py-4">
+                     <div className="flex flex-col">
+                       <span className="font-bold text-slate-800 dark:text-white">{u.displayName || "Menunggu..."}</span>
+-                      <span className="text-xs text-slate-400">{u.email}</span>
++                      <span className="text-xΓÜí text-slate-400">{u.email}</span>
+                     </div>
+                   </td>
+                   <td className="px-6 py-4">
+@@ -918,12 +919,12 @@ function AgencyManager({ isDarkMode }: { isDarkMode: boolean }) {
+                   </td>
+                   <td className="px-6 py-4">
+                     <select 
+-                      value={u.status || "pending"}
++                      value={u.statuΓÜí || "pending"}
+                       disabled={u.email === 'jagofeed@gmail.com'}
+                       onChange={(e) => handleUpdateUser(u.id, { status: e.target.value })}
+                       className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase border cursor-pointer ${
+-                        u.status === 'active' ? 'bg-emerald-50 border-emerald-100 text-emerald-600 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-400' : 
+-                        u.status === 'suspended' ? 'bg-red-50 border-red-100 text-red-600 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400' : 
++                        u.statuΓÜí === 'active' ? 'bg-emerald-50 border-emerald-100 text-emerald-600 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-400' : 
++                        u.statuΓÜí === 'suspended' ? 'bg-red-50 border-red-100 text-red-600 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400' : 
+                         'bg-amber-50 border-amber-100 text-amber-600 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-400'
+                       }`}
+                     >
+@@ -934,18 +935,18 @@ function AgencyManager({ isDarkMode }: { isDarkMode: boolean }) {
+                   </td>
+                   <td className="px-6 py-4">
+                     <span className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase ${
+-                      u.licenseStatus === 'unlimited' ? 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400' : 
+-                      u.licenseStatus === 'capped' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' : 
++                      u.licenseStatuΓÜí === 'unlimited' ? 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400' : 
++                      u.licenseStatuΓÜí === 'capped' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' : 
+                       'bg-slate-100 text-slate-400 dark:bg-slate-800'
+                     }`}>
+-                      {u.licenseStatus || 'none'}
++                      {u.licenseStatuΓÜí || 'none'}
+                     </span>
+                   </td>
+-                  <td className="px-6 py-4 font-mono text-xs text-slate-500 dark:text-slate-400">
+-                    {u.usageCount || 0} / {u.licenseStatus === 'unlimited' ? 'Γê₧' : (u.userQuota || 0)}
++                  <td className="px-6 py-4 font-mono text-xΓÜí text-slate-500 dark:text-slate-400">
++                    {u.usageCount || 0} / {u.licenseStatuΓÜí === 'unlimited' ? '├â┬ó├ïΓÇá├à┬╛' : (u.userQuota || 0)}
+                   </td>
+-                  <td className="px-6 py-4 text-xs font-mono text-slate-400">
+-                    {u.lastLogin ? new Date(u.lastLogin.seconds * 1000).toLocaleString('id-ID') : "-"}
++                  <td className="px-6 py-4 text-xΓÜí font-mono text-slate-400">
++                    {u.lastLogin ? new Date(u.lastLogin.secondΓÜí * 1000).toLocaleString('id-ID') : "-"}
+                   </td>
+                   <td className="px-6 py-4">
+                     <button 
+@@ -961,27 +962,27 @@ function AgencyManager({ isDarkMode }: { isDarkMode: boolean }) {
+           </table>
+         </div>
+ 
+-        {/* Pagination controls */}
++        {/* Pagination controlΓÜí */}
+         {sortedAndFilteredUsers.length > PAGE_SIZE && (
+           <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-800 px-6 py-4 bg-slate-50/50 dark:bg-slate-900/10">
+-            <span className="text-xs text-slate-500">
++            <span className="text-xΓÜí text-slate-500">
+               Menampilkan {paginatedUsers.length} dari {sortedAndFilteredUsers.length} user
+             </span>
+             <div className="flex gap-2">
+               <button
+                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                 disabled={currentPage === 1}
+-                className="px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 transition-colors"
++                className="px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg text-xΓÜí font-bold hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 transition-colors"
+               >
+                 Sebelumnya
+               </button>
+-              <span className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-300">
++              <span className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xΓÜí font-bold text-slate-700 dark:text-slate-300">
+                 {currentPage} / {totalPages}
+               </span>
+               <button
+                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                 disabled={currentPage === totalPages}
+-                className="px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 transition-colors"
++                className="px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg text-xΓÜí font-bold hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 transition-colors"
+               >
+                 Berikutnya
+               </button>
+@@ -998,10 +999,10 @@ function AgencyManager({ isDarkMode }: { isDarkMode: boolean }) {
+             
+             <div className="space-y-4">
+               <div>
+-                <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Tipe Lisensi</label>
++                <label className="text-xΓÜí font-bold text-slate-400 uppercase mb-1 block">Tipe Lisensi</label>
+                 <select 
+                   className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl px-4 py-2 text-sm"
+-                  value={editingUser.licenseStatus || "none"}
++                  value={editingUser.licenseStatuΓÜí || "none"}
+                   onChange={(e) => setEditingUser({...editingUser, licenseStatus: e.target.value})}
+                 >
+                   <option value="none">Tanpa Lisensi</option>
+@@ -1010,9 +1011,9 @@ function AgencyManager({ isDarkMode }: { isDarkMode: boolean }) {
+                 </select>
+               </div>
+ 
+-              {editingUser.licenseStatus === 'capped' && (
++              {editingUser.licenseStatuΓÜí === 'capped' && (
+                 <div>
+-                  <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Kuota User/Proyek</label>
++                  <label className="text-xΓÜí font-bold text-slate-400 uppercase mb-1 block">Kuota User/Proyek</label>
+                   <input 
+                     type="number"
+                     className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl px-4 py-2 text-sm"
+@@ -1023,7 +1024,7 @@ function AgencyManager({ isDarkMode }: { isDarkMode: boolean }) {
+               )}
+ 
+               <div>
+-                <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Tgl Pembelian</label>
++                <label className="text-xΓÜí font-bold text-slate-400 uppercase mb-1 block">Tgl Pembelian</label>
+                 <input 
+                   type="date"
+                   className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl px-4 py-2 text-sm"
+@@ -1043,12 +1044,12 @@ function AgencyManager({ isDarkMode }: { isDarkMode: boolean }) {
+               </button>
+               <button 
+                 onClick={() => {
+-                  const licStatus = editingUser.licenseStatus || 'none';
++                  const licStatuΓÜí = editingUser.licenseStatuΓÜí || 'none';
+                   handleUpdateUser(editingUser.id, {
+                     licenseStatus: licStatus,
+                     userQuota: Number(editingUser.userQuota) || 0,
+                     purchaseDate: editingUser.purchaseDate || null,
+-                    role: licStatus !== 'none' ? 'agency' : (editingUser.role || 'user')
++                    role: licStatuΓÜí !== 'none' ? 'agency' : (editingUser.role || 'user')
+                   });
+                 }}
+                 disabled={isSavingLocal}
+@@ -1064,9 +1065,390 @@ function AgencyManager({ isDarkMode }: { isDarkMode: boolean }) {
+   );
+ }
+ 
++// Convert any value to renderable string (handleΓÜí objectΓÜí like {title, body})
++const toStr = (val: any): string => {
++  if (val === null || val === undefined) return '';
++  if (typeof val === 'string') return val;
++  if (typeof val === 'number' || typeof val === 'boolean') return String(val);
++  if (typeof val === 'object') {
++    // Handle common patternΓÜí the AI may generate
++    if (val.title && val.body) return `${val.title}: ${val.body}`;
++    if (val.title) return val.title;
++    if (val.text) return val.text;
++    if (val.content) return val.content;
++    if (val.label) return val.label;
++    return JSON.stringify(val);
++  }
++  return String(val);
++};
++
++// Helper to resolve text alignment class
++const getAlign = (style?: string, alignment?: string): string => {
++  const ΓÜí = (style || '') + (alignment || '');
++  if (s.includes('center')) return 'text-center';
++  if (s.includes('right')) return 'text-right';
++  return 'text-left';
++};
++
++// Recursive element renderer ├â┬ó├óΓÇÜ┬¼├óΓé¼┬¥ handleΓÜí any element type the AI may generate
++const WireframeElement = ({ el, depth = 0 }: { el: any; depth?: number }) => {
++  if (!el) return null;
++  const t = el.type || '';
++
++  // ├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼ TEXT / HEADINGΓÜí ├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼
++  if (t === 'text' || t === 'text_block') {
++    const ΓÜí = el.style || '';
++    const align = getAlign(s, el.alignment);
++    if (s.includes('h1') || s.includes('title_h1')) {
++      return <h1 className={`text-2xl font-extrabold text-slate-800 dark:text-slate-100 mb-3 leading-tight ${align}`}>{toStr(el.content)}</h1>;
++    }
++    if (s.includes('h2') || s.includes('title_h2')) {
++      return <h2 className={`text-xl font-bold text-slate-700 dark:text-slate-200 mb-3 leading-snug ${align}`}>{toStr(el.content)}</h2>;
++    }
++    if (s.includes('h3') || s.includes('heading_h3')) {
++      return <h3 className={`text-lg font-bold text-slate-700 dark:text-slate-200 mb-2 ${align}`}>{toStr(el.content)}</h3>;
++    }
++    if (s.includes('italic')) {
++      return <p className={`text-xΓÜí italic text-slate-500 dark:text-slate-400 mb-2 leading-relaxed ${align}`}>{toStr(el.content)}</p>;
++    }
++    if (s.includes('small')) {
++      return <p className={`text-xΓÜí text-slate-500 dark:text-slate-400 mb-2 leading-relaxed ${align}`}>{toStr(el.content)}</p>;
++    }
++    return <p className={`text-sm text-slate-600 dark:text-slate-300 mb-3 leading-relaxed ${align}`}>{toStr(el.content)}</p>;
++  }
++
++  // ├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼ SECTION / SUB-SECTION HEADINGΓÜí ├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼
++  if (t === 'section_heading') {
++    const hasIcon = el.icon?.name;
++    return (
++      <div className="flex items-center gap-3 mb-2 mt-4">
++        {hasIcon && (
++          <div className="w-9 h-9 min-w-9 rounded-lg bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 flex items-center justify-center text-blue-500 dark:text-blue-400 text-base shrink-0">
++            {el.icon.name === 'book_open' ? '├â┬░├à┬╕├óΓé¼┼ô├óΓé¼ΓÇ£' : el.icon.name === 'lightbulb' ? '├â┬░├à┬╕├óΓé¼Γäó├é┬í' : el.icon.name === 'timer' ? '├â┬ó├é┬Å├é┬▒' : '├â┬░├à┬╕├óΓé¼┼ô├àΓÇÖ'}
++          </div>
++        )}
++        <h3 className="text-base font-bold text-blue-600 dark:text-blue-400 leading-snug">{toStr(el.content)}</h3>
++      </div>
++    );
++  }
++
++  if (t === 'sub_section_heading') {
++    return <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 mt-3">{toStr(el.content)}</h4>;
++  }
++
++  // ├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼ TITLE (standalone) ├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼
++  if (t === 'title') {
++    const align = getAlign(el.style, el.alignment);
++    return <h2 className={`text-xl font-extrabold text-slate-800 dark:text-slate-100 mb-3 ${align}`}>{toStr(el.content)}</h2>;
++  }
++
++  // ├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼ PARAGRAPH ├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼
++  if (t === 'paragraph') {
++    const align = getAlign(el.style, el.alignment);
++    return <p className={`text-sm text-slate-600 dark:text-slate-300 mb-3 leading-relaxed ${align}`}>{toStr(el.content)}</p>;
++  }
++
++  // ├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼ DIVIDERΓÜí ├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼
++  if (t === 'divider') {
++    if (el.style?.includes('creative') || el.style?.includes('themed')) {
++      return (
++        <div className="my-3 flex items-center gap-2 opacity-60">
++          <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-400 to-transparent dark:via-slate-600" />
++          <div className="text-slate-400 text-xs">├â┬ó├àΓÇ£├é┬ª</div>
++          <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-400 to-transparent dark:via-slate-600" />
++        </div>
++      );
++    }
++    return <hr className="my-3 border-slate-200 dark:border-slate-700" />;
++  }
++
++  // ├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼ BULLET / NUMBERED LISTΓÜí ├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼
++  if (t === 'bullet_points' || t === 'bullet_list') {
++    const items: any[] = el.pointΓÜí || el.itemΓÜí || [];
++    return (
++      <ul className="mb-3 space-y-1.5 pl-1">
++        {items.map((item: any, i: number) => (
++          <li key={i} className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-300">
++            <span className="mt-1.5 w-2 h-2 min-w-2 min-h-2 rounded-full bg-blue-400 dark:bg-blue-500 shrink-0" />
++            <span className="leading-relaxed">{toStr(item)}</span>
++          </li>
++        ))}
++      </ul>
++    );
++  }
++
++  if (t === 'numbered_list' || t === 'ordered_list') {
++    const items: any[] = el.itemΓÜí || el.pointΓÜí || [];
++    return (
++      <ol className="mb-3 space-y-1.5 pl-1">
++        {items.map((item: any, i: number) => (
++          <li key={i} className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-300">
++            <span className="shrink-0 w-5 h-5 min-w-5 min-h-5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 text-xΓÜí flex items-center justify-center font-bold">{i + 1}</span>
++            <span className="leading-relaxed">{toStr(item)}</span>
++          </li>
++        ))}
++      </ol>
++    );
++  }
++
++  // ├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼ IMAGE PLACEHOLDER ├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼
++  if (t === 'image_placeholder' || t === 'image') {
++    return (
++      <div className="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg h-28 flex flex-col items-center justify-center mb-3 text-slate-400 text-xΓÜí gap-1 bg-slate-50 dark:bg-slate-800/50">
++        <span className="text-2xl">├â┬░├à┬╕├óΓé¼ΓÇ£├é┬╝├â┬»├é┬╕├é┬Å</span>
++        <span>{toStr(el.content || el.alt || 'Gambar / Ilustrasi')}</span>
++      </div>
++    );
++  }
++
++  // ├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼ TABLE ├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼
++  if (t === 'table') {
++    const headers: string[] = el.headerΓÜí || (el.rows?.[0] ? Object.keys(el.rows[0]) : []);
++    const rows: any[][] = el.rowΓÜí || [];
++    return (
++      <div className="overflow-x-auto mb-3">
++        <table className="w-full text-xΓÜí border-collapse">
++          {headers.length > 0 && (
++            <thead>
++              <tr>
++                {headers.map((h: any, i: number) => (
++                  <th key={i} className="border border-slate-300 dark:border-slate-600 bg-blue-50 dark:bg-blue-900/30 p-2 text-left font-bold text-slate-700 dark:text-slate-200">{toStr(h)}</th>
++                ))}
++              </tr>
++            </thead>
++          )}
++          <tbody>
++            {rows.map((row: any, ri: number) => (
++              <tr key={ri} className="even:bg-slate-50 dark:even:bg-slate-800/30">
++                {(Array.isArray(row) ? row : Object.values(row)).map((cell: any, ci: number) => (
++                  <td key={ci} className="border border-slate-200 dark:border-slate-700 p-2 text-slate-600 dark:text-slate-300">{toStr(cell)}</td>
++                ))}
++              </tr>
++            ))}
++          </tbody>
++        </table>
++      </div>
++    );
++  }
++
++  // ├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼ MULTIPLE CHOICE ├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼
++  if (t === 'multiple_choice') {
++    const opts: any[] = el.optionΓÜí || [];
++    return (
++      <div className="mb-4">
++        <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">{toStr(el.question || el.content)}</p>
++        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
++          {opts.map((opt: any, i: number) => {
++            const label = String.fromCharCode(65 + i);
++            return (
++              <div key={i} className="flex gap-2 items-center text-sm text-slate-600 dark:text-slate-300">
++                <div className="w-6 h-6 min-w-6 shrink-0 border border-slate-300 dark:border-slate-600 rounded-full flex items-center justify-center text-xΓÜí font-bold text-slate-500">{label}</div>
++                <span>{toStr(opt)}</span>
++              </div>
++            );
++          })}
++        </div>
++      </div>
++    );
++  }
++
++  // ├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼ FILL IN THE BLANK ├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼
++  if (t === 'fill_in_the_blank' || t === 'fill_blank') {
++    return (
++      <div className="mb-3 flex items-baseline gap-2 text-sm text-slate-600 dark:text-slate-300">
++        <span>{toStr(el.question || el.content)}</span>
++        <span className="flex-1 border-b-2 border-dashed border-slate-400 dark:border-slate-500 min-w-[80px]" />
++      </div>
++    );
++  }
++
++  // ├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼ MATCHING / MENCOCOKKAN ├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼
++  if (t === 'matching' || t === 'matching_column') {
++    const left: any[] = el.left_column || el.column_a || [];
++    const right: any[] = el.right_column || el.column_b || [];
++    return (
++      <div className="mb-4 grid grid-cols-2 gap-4 text-sm">
++        <div className="flex flex-col gap-2">
++          {left.map((v: any, i: number) => (
++            <div key={i} className="px-3 py-2 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded text-slate-700 dark:text-slate-300 text-xs">{i+1}. {toStr(v)}</div>
++          ))}
++        </div>
++        <div className="flex flex-col gap-2">
++          {right.map((v: any, i: number) => (
++            <div key={i} className="px-3 py-2 border border-slate-200 dark:border-slate-700 bg-blue-50 dark:bg-blue-900/20 rounded text-slate-700 dark:text-slate-300 text-xs">{String.fromCharCode(65+i)}. {toStr(v)}</div>
++          ))}
++        </div>
++      </div>
++    );
++  }
++
++  // ├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼ ESSAY / SHORT ANSWER ├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼
++  if (t === 'essay' || t === 'short_answer' || t === 'open_ended') {
++    return (
++      <div className="mb-4">
++        <p className="text-sm text-slate-700 dark:text-slate-200 mb-2">{toStr(el.question || el.content)}</p>
++        <div className="border border-dashed border-slate-300 dark:border-slate-600 rounded-lg p-3 min-h-[60px] bg-slate-50 dark:bg-slate-800/50 text-xΓÜí text-slate-400 italic">Jawaban siswa...</div>
++      </div>
++    );
++  }
++
++  // ├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼ CODE BLOCK ├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼
++  if (t === 'code_block') {
++    return (
++      <pre className="p-3 bg-slate-900 dark:bg-black border border-slate-700 rounded-md font-mono text-xΓÜí mb-3 text-green-400 overflow-x-auto">{toStr(el.content)}</pre>
++    );
++  }
++
++  // ├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼ CALLOUT / IMPORTANT BOX ├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼
++  if (t === 'callout' || t === 'info_box' || t === 'highlight_box' || t === 'note_box' || t === 'definition_box') {
++    const icons: Record<string,string> = { info: '├â┬ó├óΓé¼┼╛├é┬╣├â┬»├é┬╕├é┬Å', warning: '├â┬ó├à┬í├é┬á├â┬»├é┬╕├é┬Å', tip: '├â┬░├à┬╕├óΓé¼Γäó├é┬í', success: '├â┬ó├àΓÇ£├óΓé¼┬ª', note: '├â┬░├à┬╕├óΓé¼┼ô├é┬¥' };
++    const icon = icons[el.variant] || icons[el.style?.split('_')[0]] || '├â┬░├à┬╕├óΓé¼┼ô├àΓÇÖ';
++    return (
++      <div className="my-3 flex gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-400 dark:border-blue-500 rounded-r-lg">
++        <span className="text-lg shrink-0">{icon}</span>
++        <div>
++          {el.title && <p className="font-bold text-sm text-blue-700 dark:text-blue-300 mb-1">{toStr(el.title)}</p>}
++          <p className="text-xΓÜí text-slate-600 dark:text-slate-300 leading-relaxed">{toStr(el.content)}</p>
++        </div>
++      </div>
++    );
++  }
++
++  // ├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼ LAYOUT ROW (footer columnΓÜí etc.) ├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼
++  if (t === 'layout_row') {
++    const cols: any[] = el.columnΓÜí || [];
++    return (
++      <div className="flex items-center gap-2 py-1">
++        {cols.map((col: any, i: number) => (
++          <div key={i} className={`flex-1 text-xΓÜí text-slate-500 dark:text-slate-400 ${getAlign('', col.alignment)}`}>
++            {col.content && col.content !== '' ? (
++              col.style?.includes('badge') ? (
++                <span className="inline-block px-2.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 font-bold text-xΓÜí border border-blue-200 dark:border-blue-700">
++                  {toStr(col.content)}
++                </span>
++              ) : toStr(col.content)
++            ) : <span className="opacity-0">-</span>}
++          </div>
++        ))}
++      </div>
++    );
++  }
++
++  // ├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼ COLUMN CONTAINER (multi-column layout) ├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼
++  if (t === 'layout_column_container' || t === 'columns' || t === 'column_layout') {
++    const cols: any[] = el.columnΓÜí || [];
++    return (
++      <div className="flex gap-4 mb-3 flex-wrap sm:flex-nowrap">
++        {cols.map((col: any, i: number) => (
++          <div key={i} className="flex-1 min-w-0 border border-slate-200 dark:border-slate-700 rounded-lg p-3 bg-slate-50/70 dark:bg-slate-800/40">
++            {col.elements?.map((subEl: any, j: number) => (
++              <WireframeElement key={j} el={subEl} depth={depth + 1} />
++            ))}
++            {!col.elementΓÜí && col.content && (
++              <p className="text-xΓÜí text-slate-600 dark:text-slate-300">{toStr(col.content)}</p>
++            )}
++          </div>
++        ))}
++      </div>
++    );
++  }
++
++  // ├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼ HEADER IDENTITAΓÜí (nama, kelas, dll) ├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼
++  if (t === 'header_identitas' || t === 'student_identity' || t === 'identity_block') {
++    const fields: any[] = el.fieldΓÜí || ['Nama', 'Kelas', 'Tanggal'];
++    return (
++      <div className="mb-4 p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800/50">
++        <div className="grid grid-cols-1 gap-2">
++          {fields.map((f: any, i: number) => (
++            <div key={i} className="flex items-center gap-2 text-xΓÜí text-slate-600 dark:text-slate-300">
++              <span className="font-semibold w-24 shrink-0">{toStr(f)}:</span>
++              <span className="flex-1 border-b border-dashed border-slate-400 dark:border-slate-500 h-4" />
++            </div>
++          ))}
++        </div>
++      </div>
++    );
++  }
++
++  // ├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼ GENERIC FALLBACK ├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼├â┬ó├óΓé¼┬¥├óΓÇÜ┬¼
++  return (
++    <div className="mb-2 p-2 border border-dashed border-amber-300 dark:border-amber-700 rounded bg-amber-50 dark:bg-amber-900/10 text-xΓÜí text-amber-600 dark:text-amber-400">
++      <span className="font-bold">[{t}]</span> {toStr(el.content || el.question || el.title || '')}
++    </div>
++  );
++};
++
++
++// Main WireframePreview component
++const WireframePreview = ({ data }: { data: any }) => {
++  if (!data) return <div className="p-8 text-center text-slate-500">Belum ada data</div>;
++
++  try {
++    const parsed = typeof data === 'string' ? JSON.parse(data) : data;
++    if (!parsed || !parsed.layout_structure) {
++      return <div className="p-8 text-center text-slate-500">Format JSON tidak sesuai</div>;
++    }
++
++    const areaColors: Record<string, string> = {
++      'HEADER_MINIMAL': 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800',
++      'HEADER_IDENTITAS_LENGKAP': 'bg-indigo-50 dark:bg-indigo-950/30 border-indigo-200 dark:border-indigo-800',
++      'MAIN_CONTENT_AREA': 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700',
++      'FOOTER_BRANDING': 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700',
++      'UPSELL_AREA': 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-700',
++    };
++    const areaBadge: Record<string, string> = {
++      'HEADER_MINIMAL': 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-300',
++      'HEADER_IDENTITAS_LENGKAP': 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300',
++      'MAIN_CONTENT_AREA': 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300',
++      'FOOTER_BRANDING': 'bg-slate-200 dark:bg-slate-600 text-slate-500 dark:text-slate-200',
++      'UPSELL_AREA': 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300',
++    };
++
++    return (
++      <div
++        className="w-full max-w-2xl mx-auto rounded-2xl overflow-hidden shadow-lg border border-slate-200 dark:border-slate-700 flex flex-col font-sans"
++        style={{ background: 'white' }}
++      >
++        {/* Page info bar */}
++        <div className="flex items-center justify-between px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white text-xΓÜí font-medium">
++          <span>├â┬░├à┬╕├óΓé¼┼ô├óΓé¼┼╛ Halaman {parsed.meta?.page_number ?? '?'}</span>
++          <span>{parsed.meta?.subject ?? ''} ├âΓÇÜ├é┬╖ {parsed.meta?.paper_size ?? ''} {parsed.meta?.orientation ?? ''}</span>
++        </div>
++
++        {/* SectionΓÜí */}
++        {parsed.layout_structure.map((section: any, idx: number) => {
++          const key = section.area ?? '';
++          const colorClasΓÜí = areaColors[key] ?? 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700';
++          const badgeClasΓÜí = areaBadge[key] ?? 'bg-slate-100 dark:bg-slate-700 text-slate-500';
++          return (
++            <div key={idx} className={`border-b last:border-b-0 ${colorClass}`}>
++              {/* Area label */}
++              <div className="px-5 pt-3 pb-0 flex items-center gap-2">
++                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${badgeClass}`}>
++                  {key}
++                </span>
++              </div>
++              {/* ElementΓÜí */}
++              <div className="px-5 py-3">
++                {section.elements?.map((el: any, elIdx: number) => (
++                  <WireframeElement key={elIdx} el={el} />
++                ))}
++              </div>
++            </div>
++          );
++        })}
++      </div>
++    );
++  } catch (e) {
++    return <div className="p-8 text-center text-red-500">Gagal me-render JSON. Format tidak valid.</div>;
++  }
++};
++
++
+ export default function App() {
+   const [isDarkMode, setIsDarkMode] = useState(false);
+   const [view, setView] = useState<"dashboard" | "generator" | "api_settings">("dashboard");
++  const [previewMode, setPreviewMode] = useState<"json" | "wireframe">("json");
+   const [projectId, setProjectId] = useState<string | null>(null);
+   const [projects, setProjects] = useState<any[]>([]);
+   const [isLoadingProjects, setIsLoadingProjects] = useState(false);
+@@ -1110,8 +1492,9 @@ export default function App() {
+     materi: 'Transportation',
+     jenjang: 'SD (Kurikulum Merdeka)',
+     fase: 'Fase B',
+-    kelas: 'Kelas 3',
++    kelas: 'KelaΓÜí 3',
+     halaman: 2,
++    halamanGuru: 1,
+     rasio: '30:70',
+     drillingMode: false,
+     tipeKonten: 'STANDAR',
+@@ -1130,7 +1513,7 @@ export default function App() {
+     referensiProyek: '',
+     enableUpsell: false,
+     upsellTitle: 'Dapatkan Lebih Banyak LKPD Seperti Ini!',
+-    upsellMessage: 'Jika Anda menyukai materi ini, bergabunglah dengan komunitas kami untuk mendapatkan update terbaru.',
++    upsellMessage: 'Jika Anda menyukai materi ini, bergabunglah dengan komunitaΓÜí kami untuk mendapatkan update terbaru.',
+     upsellCreatorName: '',
+     upsellTargetUrl: '',
+     upsellIncludeQr: true,
+@@ -1154,16 +1537,16 @@ export default function App() {
+         outline: outlineText,
+         pageData: JSON.stringify(pageData)
+       };
+-      const bytes = JSON.stringify(dataToMeasure).length;
++      const byteΓÜí = JSON.stringify(dataToMeasure).length;
+       const limit = 1000000; // 1MB limit
+-      const percentage = Math.min((bytes / limit) * 100, 100);
++      const percentage = Math.min((byteΓÜí / limit) * 100, 100);
+       
+       return {
+         bytes,
+         percentage,
+         isWarning: percentage > 60,
+         isCritical: percentage > 85,
+-        kb: (bytes / 1024).toFixed(1)
++        kb: (byteΓÜí / 1024).toFixed(1)
+       };
+     } catch (e) {
+       return { bytes: 0, percentage: 0, isWarning: false, isCritical: false, kb: "0" };
+@@ -1186,19 +1569,19 @@ export default function App() {
+   const isQuotaExceeded = () => {
+     if (userRole === "super-admin" || userRole === "admin") return false;
+     
+-    // If part of an agency, check agency status first
++    // If part of an agency, check agency statuΓÜí first
+     if (userProfile?.agencyId) {
+       // Note: Ideally we'd fetch agency profile here, but for now we assume 
+       // if they are in the team, they follow their own user limit OR stay active.
+-      // In a real app, we'd check if (agencyProfile.status === 'suspended')
++      // In a real app, we'd check if (agencyProfile.statuΓÜí === 'suspended')
+     }
+ 
+-    if (userProfile?.licenseStatus === "unlimited") return false;
+-    if (userProfile?.role === "agency" && userProfile?.licenseStatus === "capped") {
++    if (userProfile?.licenseStatuΓÜí === "unlimited") return false;
++    if (userProfile?.role === "agency" && userProfile?.licenseStatuΓÜí === "capped") {
+       return (userProfile.usageCount || 0) >= (userProfile.userQuota || 0);
+     }
+     
+-    // Default user limit (10 projects for free users)
++    // Default user limit (10 projectΓÜí for free users)
+     if (userRole === "user" && !userProfile?.licenseStatus) {
+       return projects.length >= 10; 
+     }
+@@ -1211,7 +1594,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+ 
+   const { user, logout } = useAuth();
+ 
+-  const fetchProjects = async () => {
++  const fetchProjectΓÜí = async () => {
+     if (!user) return;
+     setIsLoadingProjects(true);
+     try {
+@@ -1286,7 +1669,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+     } catch (err: any) {
+       console.error("Gagal menyimpan project", err);
+       if (err?.message?.includes("too large") || err?.message?.includes("limit exceeded")) {
+-        setErrorMsg("Batas Kapasitas: Project terlalu besar untuk disimpan dalam satu file. Mohon kurangi jumlah halaman.");
++        setErrorMsg("BataΓÜí Kapasitas: Project terlalu besar untuk disimpan dalam satu file. Mohon kurangi jumlah halaman.");
+       } else {
+         setErrorMsg(err?.message || "Gagal menyimpan ke server. Hubungi admin jika masalah berlanjut.");
+       }
+@@ -1300,7 +1683,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+     setFormData({ ...defaultFormData, ...(project.formData || {}) });
+     setOutlineText(project.outline || "");
+     
+-    // Handle serialized pageData to avoid nested array errors in Firestore
++    // Handle serialized pageData to avoid nested array errorΓÜí in Firestore
+     let pData = {};
+     if (typeof project.pageData === 'string') {
+       try {
+@@ -1321,7 +1704,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+ 
+   const handleDeleteProject = async (id: string, e: React.MouseEvent) => {
+     e.stopPropagation();
+-    if (!confirm("Hapus project ini secara permanen?")) return;
++    if (!confirm("HapuΓÜí project ini secara permanenΓÇö)) return;
+     
+     try {
+       await deleteDoc(doc(db, "lkpds", id));
+@@ -1354,7 +1737,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+     console.log("App Mounted", { isDarkMode, formData, user: user?.email });
+     setIsMounted(true);
+     
+-    // Check role and status if user exists
++    // Check role and statuΓÜí if user exists
+     if (user) {
+       const fetchUserData = async () => {
+         try {
+@@ -1363,16 +1746,16 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+           
+           let profileToUse = userSnap.exists() ? userSnap.data() : null;
+ 
+-          // Check if user has been removed from agency
++          // Check if user haΓÜí been removed from agency
+           if (profileToUse?.removedByAgency) {
+-            console.log("User profile marks as removed by agency. Skipping migration.");
++            console.log("User profile markΓÜí aΓÜí removed by agency. Skipping migration.");
+           } else {
+-            // Check if there is a pending license/skeleton for this email
++            // Check if there iΓÜí a pending license/skeleton for thiΓÜí email
+             const q = query(collection(db, "users"), where("email", "==", user.email?.toLowerCase()));
+             const querySnap = await getDocs(q);
+             
+             if (!querySnap.empty) {
+-              // Find doc that is NOT the current UID (meaning it's a skeleton with random ID)
++              // Find doc that iΓÜí NOT the current UID (meaning it'ΓÜí a skeleton with random ID)
+               const skeletonDoc = querySnap.docs.find(doc => doc.id !== user.uid);
+               
+               if (skeletonDoc) {
+@@ -1386,7 +1769,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+                   lastLogin: serverTimestamp(),
+                   displayName: user.displayName || profileToUse?.displayName || skeletonData.displayName || "",
+                   photoURL: user.photoURL || profileToUse?.photoURL || skeletonData.photoURL || "",
+-                  status: skeletonData.status || "active" // Ensure we respect status from skeleton, don't hardcode active
++                  status: skeletonData.statuΓÜí || "active" // Ensure we respect statuΓÜí from skeleton, don't hardcode active
+                 };
+                 
+                 await setDoc(userRef, mergedUser);
+@@ -1401,7 +1784,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+           if (userSnap.exists()) {
+             let data = userSnap.data();
+             
+-            // ALWAYS sync latest info to keep agency/admin dashboards updated
++            // ALWAYΓÜí sync latest info to keep agency/admin dashboardΓÜí updated
+             const needsUpdate = 
+               data.displayName !== user.displayName || 
+               data.photoURL !== user.photoURL || 
+@@ -1426,9 +1809,9 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+ 
+             setUserProfile(data);
+             setUserRole(data.role || "user");
+-            setUserStatus(data.status || "active");
++            setUserStatus(data.statuΓÜí || "active");
+           } else {
+-            // If user does not exist in Firestore, only allow jagofeed@gmail.com to self-register
++            // If user doeΓÜí not exist in Firestore, only allow jagofeed@gmail.com to self-register
+             if (user.email === "jagofeed@gmail.com") {
+               const newUser = {
+                 uid: user.uid,
+@@ -1463,7 +1846,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+ 
+     // Load BYOK Keys
+     try {
+-      const savedKeys = localStorage.getItem('eduPrint_apiKeys');
++      const savedKeyΓÜí = localStorage.getItem('eduPrint_apiKeys');
+       if (savedKeys) {
+         setUserApiKeys(JSON.parse(savedKeys));
+       }
+@@ -1482,7 +1865,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+   }, [userApiKeys, isMounted, keysLoaded]);
+ 
+   const handleKeyChange = (index: number, val: string) => {
+-    const newKeys = [...userApiKeys];
++    const newKeyΓÜí = [...userApiKeys];
+     newKeys[index] = val;
+     setUserApiKeys(newKeys);
+   };
+@@ -1507,10 +1890,10 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+     setFormData((prev: any) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+   };
+ 
+-  const numSiswaPages = parseInt(String(formData.halaman)) || 1;
+-  const numGuruPages = formData.tipeKonten === 'MATERI' ? 0 : Math.ceil(numSiswaPages / 2);
++  const numSiswaPageΓÜí = parseInt(String(formData.halaman)) || 1;
++  const numGuruPageΓÜí = formData.tipeKonten === 'MATERI' ? 0 : (parseInt(String(formData.halamanGuru)) || 0);
+ 
+-  // Modified calls using BYOK logic
++  // Modified callΓÜí using BYOK logic
+   const handleSuggestMateri = async () => {
+     setIsSuggestingMateri(true);
+     try {
+@@ -1552,10 +1935,10 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+     if (jenjangData && jenjangData.fases) {
+       const firstFase = Object.keys(jenjangData.fases)[0];
+       newData.fase = firstFase;
+-      newData.kelas = jenjangData.fases[firstFase][0];
++      newData.kelaΓÜí = jenjangData.fases[firstFase][0];
+     } else if (jenjangData && jenjangData.types) {
+       newData.fase = "-";
+-      newData.kelas = jenjangData.types[0];
++      newData.kelaΓÜí = jenjangData.types[0];
+     }
+     
+     setFormData(newData);
+@@ -1564,8 +1947,8 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+   const handleFaseChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+     const val = e.target.value;
+     const jenjangData = JENJANG_MAP[formData.jenjang];
+-    if (jenjangData && jenjangData.fases && jenjangData.fases[val]) {
+-      const classes = jenjangData.fases[val];
++    if (jenjangData && jenjangData.faseΓÜí && jenjangData.fases[val]) {
++      const classeΓÜí = jenjangData.fases[val];
+       setFormData({ ...formData, fase: val, kelas: classes[0] });
+     }
+   };
+@@ -1591,7 +1974,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+     
+     // License Check
+     if (isQuotaExceeded()) {
+-      setErrorMsg("Kuota Lisensi Habis: Anda telah mencapai batas maksimal pembuatan proyek untuk lisensi ini. Silakan hubungi Super Admin untuk memperpanjang/meningkatkan lisensi.");
++      setErrorMsg("Kuota Lisensi Habis: Anda telah mencapai bataΓÜí maksimal pembuatan proyek untuk lisensi ini. Silakan hubungi Super Admin untuk memperpanjang/meningkatkan lisensi.");
+       return;
+     }
+ 
+@@ -1602,7 +1985,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+       if (formData.referensiProyek) {
+         const refProject = projects.find(p => p.id === formData.referensiProyek);
+         if (refProject && refProject.outline) {
+-          contextPrev = `\nKONTEKS PROYEK SEBELUMNYA (Outline Proyek Lama):\n${refProject.outline}\n--- Gunakan ini sebagai referensi agar materi berkesinambungan dan tidak duplikat. ---`;
++          contextPrev = `\nKONTEKΓÜí PROYEK SEBELUMNYA (Outline Proyek Lama):\n${refProject.outline}\n--- Gunakan ini sebagai referensi agar materi berkesinambungan dan tidak duplikat. ---`;
+         }
+       }
+ 
+@@ -1614,14 +1997,14 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+         - Jenjang: ${formData.jenjang}
+         - Fase & Kelas/Tingkat: ${formData.fase} - ${formData.kelas}
+         - Jumlah Halaman Siswa: ${numSiswaPages} halaman
+-        - Halaman Cover: ${formData.sertakanCover ? 'Halaman 1 dialokasikan khusus untuk Cover/Identitas.' : 'Tidak ada halaman cover khusus.'}
+-        - Jumlah Halaman Guru: ${numGuruPages} halaman ${numGuruPages > 0 ? '(Otomatis ditambahkan di akhir untuk kunci jawaban)' : '(Tidak diperlukan karena mode Materi Saja)'}
++        - Halaman Cover: ${formData.sertakanCover ? 'Halaman 1 dialokasikan khusuΓÜí untuk Cover/Identitas.' : 'Tidak ada halaman cover khusus.'}
++        - Jumlah Halaman Guru: ${numGuruPages} halaman ${numGuruPageΓÜí > 0 ? '(OtomatiΓÜí ditambahkan di akhir untuk kunci jawaban)' : '(Tidak diperlukan karena mode Materi Saja)'}
+         - Mode Konten: ${
+           formData.tipeKonten === 'DRILLING' || formData.drillingMode 
+-            ? 'DRILLING MODE AKTIF ΓÇö Hanya soal latihan padat, ZERO materi teori, target kepadatan soal maksimal per halaman. Outline hanya berisi daftar soal/latihan tanpa alokasi halaman materi.' 
++            ? 'DRILLING MODE AKTIF ├â┬ó├óΓÇÜ┬¼├óΓé¼┬¥ Hanya soal latihan padat, ZERO materi teori, target kepadatan soal maksimal per halaman. Outline hanya berisi daftar soal/latihan tanpa alokasi halaman materi.' 
+             : formData.tipeKonten === 'MATERI'
+-            ? 'MATERI SAJA AKTIF ΓÇö Hanya berisi rangkuman materi teori, infografis, atau bacaan. ZERO soal latihan atau pertanyaan.'
+-            : `Rasio Materi vs Latihan: ${formData.rasio}`
++            ? 'MATERI SAJA AKTIF ├â┬ó├óΓÇÜ┬¼├óΓé¼┬¥ Hanya berisi rangkuman materi teori, infografis, atau bacaan. ZERO soal latihan atau pertanyaan.'
++            : `Rasio Materi vΓÜí Latihan: ${formData.rasio}`
+         }
+         - Mode Kesulitan: ${formData.mode}
+         - Gaya Visual: ${formData.visual}
+@@ -1629,20 +2012,20 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+         - Bilingual: ${formData.bilingual ? 'Ya (Instruksi Indonesia, Konten Bahasa Inggris)' : 'Tidak (Bahasa Utama Saja)'}
+         - Ukuran Kertas: ${formData.ukuranKertas}
+         - Orientasi: ${formData.orientasi}
+-        - Instruksi Khusus: ${formData.pesanKhusus ? formData.pesanKhusus : 'Tidak ada'}
++        - Instruksi Khusus: ${formData.pesanKhusuΓÜí ? formData.pesanKhusuΓÜí : 'Tidak ada'}
+         - Halaman Upsell/Kredit: ${formData.enableUpsell ? `Ya, Sertakan 1 halaman bernama "Hal Upsell" di akhir outline (berisi promosi: Judul "${formData.upsellTitle}", Pesan "${formData.upsellMessage}", Link "${formData.upsellTargetUrl}", Kreator "${formData.upsellCreatorName}")` : 'Tidak perlu'}
+         ${contextPrev}
+ 
+         FORMAT OUTPUT YANG DIMINTA (Contoh untuk 2 siswa + 1 guru + Upsell):
+-        OUTLINE LKPD: [Mapel] ΓÇö [Materi] | Kelas [X] | Mode: [Y]
+-        Hal 1 ΓÇö Identitas + [Nama Aktivitas]: [deskripsi singkat]
+-        Hal 2 ΓÇö [Nama Aktivitas]: [deskripsi singkat]
++        OUTLINE LKPD: [Mapel] ├â┬ó├óΓÇÜ┬¼├óΓé¼┬¥ [Materi] | KelaΓÜí [X] | Mode: [Y]
++        Hal 1 ├â┬ó├óΓÇÜ┬¼├óΓé¼┬¥ IdentitaΓÜí + [Nama Aktivitas]: [deskripsi singkat]
++        Hal 2 ├â┬ó├óΓÇÜ┬¼├óΓé¼┬¥ [Nama Aktivitas]: [deskripsi singkat]
+         ...
+-        Hal Guru 1 ΓÇö Kunci Jawaban (Hal 1-2) + Rubrik Penilaian
+-        Hal Guru 2 (Jika ada) ΓÇö Kunci Jawaban Lanjutan
+-        Hal Upsell (Jika aktif) ΓÇö Halaman Marketing & Kredit Kreator
++        Hal Guru 1 ├â┬ó├óΓÇÜ┬¼├óΓé¼┬¥ Kunci Jawaban (Hal 1-2) + Rubrik Penilaian
++        Hal Guru 2 (Jika ada) ├â┬ó├óΓÇÜ┬¼├óΓé¼┬¥ Kunci Jawaban Lanjutan
++        Hal Upsell (Jika aktif) ├â┬ó├óΓÇÜ┬¼├óΓé¼┬¥ Halaman Marketing & Kredit Kreator
+         
+-        Alokasi waktu estimasi total: ┬▒XX menit
++        Alokasi waktu estimasi total: ├âΓÇÜ├é┬▒XX menit
+       `;
+       const result = await callGeminiAPI(userPrompt, SYSTEM_PROMPT, false, userRole, userApiKeys, isAutoinjected);
+       if (result) {
+@@ -1672,8 +2055,8 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+         Pengguna meminta REVISI berikut: 
+         "${revisionInput}"
+ 
+-        Tolong perbarui outline di atas sesuai dengan permintaan revisi. 
+-        Pastikan format tetap rapi dan keluarkan HANYA teks outline yang sudah direvisi.
++        Tolong perbarui outline di ataΓÜí sesuai dengan permintaan revisi. 
++        Pastikan format tetap rapi dan keluarkan HANYA tekΓÜí outline yang sudah direvisi.
+       `;
+       const result = await callGeminiAPI(userPrompt, SYSTEM_PROMPT, false, userRole, userApiKeys, isAutoinjected);
+       if (result) {
+@@ -1695,9 +2078,9 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+   };
+ 
+   const extractJSON = (text: string) => {
+-    if (!text) throw new Error("Respons AI kosong.");
++    if (!text) throw new Error("ResponΓÜí AI kosong.");
+     
+-    // Remove potential hidden characters or BOM
++    // Remove potential hidden characterΓÜí or BOM
+     const cleanText = text.trim().replace(/^[\u200B\u200C\u200D\u200E\u200F\uFEFF]/, "");
+     
+     try {
+@@ -1726,7 +2109,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+         }
+       }
+       
+-      throw new Error("Teks respons tidak mengandung format JSON yang valid.");
++      throw new Error("TekΓÜí responΓÜí tidak mengandung format JSON yang valid.");
+     }
+   };
+ 
+@@ -1741,7 +2124,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+     try {
+       const currentJSON = JSON.stringify(pageData[activeTab].data, null, 2);
+       const userPrompt = `
+-        Konteks Project:
++        KontekΓÜí Project:
+         - Mapel: ${formData.mapel}
+         - Materi: ${formData.materi}
+         - Jenjang & Kelas: ${formData.jenjang} - ${formData.kelas} (${formData.fase})
+@@ -1755,10 +2138,10 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+         INSTRUKSI REVISI DARI USER:
+         "${revisionInput}"
+         
+-        TUGAS: Revisi objek JSON di atas berdasarkan instruksi user. 
++        TUGAS: Revisi objek JSON di ataΓÜí berdasarkan instruksi user. 
+         - Jaga konsistensi branding (FOOTER_BRANDING).
+         - Tetap kembalikan dalam format JSON yang valid dan lengkap.
+-        - Jangan kurangi kualitas detail visual_prompt-nya.
++        - Jangan kurangi kualitaΓÜí detail visual_prompt-nya.
+       `;
+       
+       const resultText = await callGeminiAPI(userPrompt, SYSTEM_PROMPT, true, userRole, userApiKeys, isAutoinjected);
+@@ -1791,33 +2174,34 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+       const pageTargetName = isGuru ? `Halaman ${pageId} (Kunci Jawaban)` : isUpsell ? `Halaman ${pageId} (Marketing & Kredit)` : `Halaman ${pageId} (Lembar Kerja Siswa)`;
+       let modeInstruction = '';
+       if (formData.tipeKonten === 'DRILLING' || formData.drillingMode) {
+-        modeInstruction = 'INSTRUKSI KERAS ΓÇö DRILLING MODE: Halaman ini HANYA berisi soal latihan. DILARANG TOTAL ada blok materi atau teori. Gunakan layout 2-kolom untuk soal PG. Susun soal sepadat mungkin. ';
++        modeInstruction = 'INSTRUKSI KERAΓÜí ├â┬ó├óΓÇÜ┬¼├óΓé¼┬¥ DRILLING MODE: Halaman ini HANYA berisi soal latihan. DILARANG TOTAL ada blok materi atau teori. Gunakan layout 2-kolom untuk soal PG. Susun soal sepadat mungkin. ';
+       } else if (formData.tipeKonten === 'MATERI') {
+-        modeInstruction = 'INSTRUKSI KERAS ΓÇö MODE MATERI SAJA: Halaman ini HANYA berisi rangkuman bacaan atau infografis. DILARANG TOTAL menyertakan soal latihan, kuis, field isian kosong, atau pertanyaan apapun. ';
++        modeInstruction = 'INSTRUKSI KERAΓÜí ├â┬ó├óΓÇÜ┬¼├óΓé¼┬¥ MODE MATERI SAJA: Halaman ini HANYA berisi rangkuman bacaan atau infografis. DILARANG TOTAL menyertakan soal latihan, kuis, field isian kosong, atau pertanyaan apapun. ';
+       }
+ 
+-      const optionalInstructions = formData.pesanKhusus
++      const optionalInstructionΓÜí = formData.pesanKhusus
+         ? `${modeInstruction}User meminta: "${formData.pesanKhusus}". Wajib integrasikan permintaan ini ke dalam tema konten dan visual_prompt.`
+-        : (modeInstruction || 'Tidak ada instruksi khusus tambahan.');
++        : (modeInstruction || 'Tidak ada instruksi khusuΓÜí tambahan.');
+       
+       let pageContext = "";
+       if (isGuru) {
+         pageContext = "SANGAT PENTING: Karena ini adalah HALAMAN GURU, terapkan aturan BAGIAN 1 - HALAMAN TERAKHIR secara ketat. Dilarang menggunakan elemen dekoratif berlebihan, pastikan semua KUNCI JAWABAN dan rubrik evaluasi ditampilkan dengan jelas.";
+       } else if (pageId === "1" && formData.sertakanCover) {
+-        pageContext = "SANGAT PENTING: Ini adalah HALAMAN COVER. Terapkan aturan BAGIAN 1 - HALAMAN 1 (COVER PENUH) secara ketat. Dilarang memberikan materi atau soal latihan di halaman ini. Harus berupa layout cover besar dengan maskot/ilustrasi yang dominan.";
++        pageContext = "SANGAT PENTING: Ini adalah HALAMAN COVER. Terapkan aturan BAGIAN 1 - HALAMAN 1 (COVER PENUH) secara ketat. Dilarang memberikan materi atau soal latihan di halaman ini. HaruΓÜí berupa layout cover besar dengan maskot/ilustrasi yang dominan.";
+       } else if (pageId === "1") {
+-        pageContext = "SANGAT PENTING: Ini adalah HALAMAN 1. Terapkan aturan BAGIAN 1 - HALAMAN 1 (STANDAR) secara ketat (Wajib ada HEADER_IDENTITAS_LENGKAP di bagian atas sebelum soal/materi).";
++        pageContext = "SANGAT PENTING: Ini adalah HALAMAN 1. Terapkan aturan BAGIAN 1 - HALAMAN 1 (STANDAR) secara ketat (Wajib ada HEADER_IDENTITAS_LENGKAP di bagian ataΓÜí sebelum soal/materi).";
+       } else if (isUpsell) {
+         pageContext = `SANGAT PENTING: Ini adalah HALAMAN UPSELL. Terapkan aturan BAGIAN 7 secara ketat. Buat halaman yang mempromosikan kreator/brand dengan judul "${formData.upsellTitle}", pesan "${formData.upsellMessage}", link "${formData.upsellTargetUrl}", nama kreator "${formData.upsellCreatorName}", dan QR Code: ${formData.upsellIncludeQr ? 'Sertakan (gunakan gambar placeholder QR)' : 'Tidak perlu'}. Dilarang memberikan materi atau soal latihan.`;
+       } else {
+-        pageContext = "SANGAT PENTING: Karena ini adalah HALAMAN SISWA, DILARANG KERAS mencantumkan jawaban yang benar di dalam JSON (seperti tanda silang, lingkaran, atau teks penanda pada jawaban). Terapkan aturan BAGIAN 1 - HALAMAN 2 DST.";
++        pageContext = "SANGAT PENTING: Karena ini adalah HALAMAN SISWA, DILARANG KERAΓÜí mencantumkan jawaban yang benar di dalam JSON (seperti tanda silang, lingkaran, atau tekΓÜí penanda pada jawaban). Terapkan aturan BAGIAN 1 - HALAMAN 2 DST.";
+       }
+ 
+       const footerTemplate = buildFooterTemplate(
+         pageId,
+         formData.namaGuru,
+         formData.tahunAjaran,
+-        pageId === "1" && formData.sertakanCover
++        pageId === "1" && formData.sertakanCover,
++        isUpsell
+       );
+       const footerTemplateStr = JSON.stringify(footerTemplate, null, 2);
+ 
+@@ -1828,9 +2212,9 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+         Gaya Visual: ${formData.visual}
+         Mode Konten: ${
+           formData.tipeKonten === 'DRILLING' || formData.drillingMode 
+-            ? 'DRILLING_MODE: true ΓÇö Terapkan BAGIAN 3B secara penuh. ZERO materi teori.' 
++            ? 'DRILLING_MODE: true ├â┬ó├óΓÇÜ┬¼├óΓé¼┬¥ Terapkan BAGIAN 3B secara penuh. ZERO materi teori.' 
+             : formData.tipeKonten === 'MATERI'
+-            ? 'MATERI_SAJA_MODE: true ΓÇö Terapkan BAGIAN 3C secara penuh. ZERO soal latihan.'
++            ? 'MATERI_SAJA_MODE: true ├â┬ó├óΓÇÜ┬¼├óΓé¼┬¥ Terapkan BAGIAN 3C secara penuh. ZERO soal latihan.'
+             : `Rasio Materi:Latihan: ${formData.rasio}`
+         }
+         Tema Karakter: ${formData.karakter}
+@@ -1839,20 +2223,20 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+         Ukuran Kertas: ${formData.ukuranKertas}
+         Orientasi: ${formData.orientasi}
+         
+-        IDENTITAS BRANDING:
++        IDENTITAΓÜí BRANDING:
+         - Nama Guru: ${formData.namaGuru || '-'}
+         - Nama Sekolah: ${formData.namaSekolah || '-'}
+         - Tahun Ajaran: ${formData.tahunAjaran || '-'}
+-        - Teks Footer: ${formData.footerText}
++        - TekΓÜí Footer: ${formData.footerText}
+ 
+         INSTRUKSI TAMBAHAN (SANGAT PENTING):
+         ${optionalInstructions}
+-        - WAJIB gunakan area "FOOTER_BRANDING" dengan format teks dan visual_prompt yang persis sama di setiap halaman untuk konsistensi branding (lihat aturan BAGIAN 5 di System Prompt).
++        - WAJIB gunakan area "FOOTER_BRANDING" dengan format tekΓÜí dan visual_prompt yang persiΓÜí sama di setiap halaman untuk konsistensi branding (lihat aturan BAGIAN 5 di System Prompt).
+         - Selalu gunakan area "HEADER_MINIMAL" untuk halaman siswa (Halaman 2 ke atas).
+ 
+-        TUGAS UTAMA: Buatkan JSON Layout KHUSUS untuk ${pageTargetName}.
++        TUGAΓÜí UTAMA: Buatkan JSON Layout KHUSUΓÜí untuk ${pageTargetName}.
+         - Jangan generate halaman lain.
+-        - Terapkan aturan Zero-Placeholder (tulis soal utuh).
++        - Terapkan aturan Zero-Placeholder (tuliΓÜí soal utuh).
+         - Keluarkan hasilnya HANYA berupa objek JSON murni (jangan array).
+         
+         INSTRUKSI KRUSIAL PEMISAHAN KONTEN:
+@@ -1864,12 +2248,13 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+           "layout_structure": [ ... ]
+         }
+ 
+-        FOOTER TEMPLATE ΓÇö INSTRUKSI KERAS:
+-        Salin objek JSON berikut PERSIS SAMA ke dalam output JSON 
++        FOOTER TEMPLATE ├â┬ó├óΓÇÜ┬¼├óΓé¼┬¥ INSTRUKSI KERAS:
++        Salin objek JSON berikut PERSIΓÜí SAMA ke dalam output JSON 
+         kamu sebagai area FOOTER_BRANDING. Dilarang mengubah 
+         visual_prompt, nama field, urutan element, atau struktur 
+-        apapun. Satu-satunya nilai yang boleh berbeda adalah 
+-        content nomor halaman jika pageId berbeda.
++        apapun. DILARANG KERAΓÜí MENAMBAHKAN TEKΓÜí EKSTRA (motivasi, kutipan, dsb) 
++        di area footer. Satu-satunya nilai yang boleh berbeda adalah 
++        content nomor halaman jika pageId berbeda. Jika string kosong "", biarkan kosong.
+ 
+         ${footerTemplateStr}
+       `;
+@@ -1926,14 +2311,14 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+     }
+   };
+ 
+-  const pageTabs = Array.from({ length: numSiswaPages }, (_, i) => (i + 1).toString());
++  const pageTabΓÜí = Array.from({ length: numSiswaPageΓÜí }, (_, i) => (i + 1).toString());
+   if (formData.enableUpsell) {
+     pageTabs.push("Upsell");
+   }
+-  const guruTabs = Array.from({ length: numGuruPages }, (_, i) => `Guru ${i + 1}`);
++  const guruTabΓÜí = Array.from({ length: numGuruPageΓÜí }, (_, i) => `Guru ${i + 1}`);
+ 
+   // Mencegah Hydration Error yang mematikan fungsi tombol
+-  if (!isMounted || userStatus === "loading") {
++  if (!isMounted || userStatuΓÜí === "loading") {
+     return (
+       <div className="flex h-screen w-full items-center justify-center bg-slate-50 dark:bg-slate-950">
+         <div className="flex flex-col items-center gap-4">
+@@ -1945,14 +2330,14 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+   }
+ 
+   // Pending Approval View
+-  if (userStatus === "pending" && userRole !== "admin" && userRole !== "super-admin") {
++  if (userStatuΓÜí === "pending" && userRole !== "admin" && userRole !== "super-admin") {
+     return (
+-      <div className={`${isDarkMode ? 'dark' : ''} antialiased h-screen w-full bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4 transition-colors duration-300`}>
++      <div className={`${isDarkMode ? 'dark' : ''} antialiased h-screen w-full bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4 transition-colorΓÜí duration-300`}>
+         <div className="max-w-md w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 shadow-xl shadow-blue-500/5 text-center animate-in fade-in zoom-in duration-500">
+           <div className="w-20 h-20 bg-amber-50 dark:bg-amber-900/20 rounded-3xl flex items-center justify-center text-amber-500 mx-auto mb-6 relative">
+             <Clock className="w-10 h-10 animate-pulse" />
+             <div className="absolute top-0 right-0 w-6 h-6 bg-amber-500 text-white rounded-full flex items-center justify-center border-4 border-white dark:border-slate-900">
+-              <Plus className="w-3 h-3 rotate-45" />
++              <PluΓÜí className="w-3 h-3 rotate-45" />
+             </div>
+           </div>
+           
+@@ -1962,8 +2347,8 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+           </p>
+           
+           <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-2xl mb-8">
+-            <p className="text-xs text-blue-700 dark:text-blue-400 font-medium">
+-              Proses verifikasi biasanya memakan waktu kurang dari 24 jam. Silakan hubungi tim IT atau Admin jika ada pertanyaan.
++            <p className="text-xΓÜí text-blue-700 dark:text-blue-400 font-medium">
++              ProseΓÜí verifikasi biasanya memakan waktu kurang dari 24 jam. Silakan hubungi tim IT atau Admin jika ada pertanyaan.
+             </p>
+           </div>
+           
+@@ -1972,7 +2357,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+               onClick={() => window.location.reload()}
+               className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all active:scale-95 flex items-center justify-center gap-2"
+             >
+-              <RefreshCw className="w-4 h-4" /> Cek Status Sekarang
++              <RefreshCw className="w-4 h-4" /> Cek StatuΓÜí Sekarang
+             </button>
+             <button 
+               onClick={() => logout()}
+@@ -1987,16 +2372,16 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+   }
+ 
+   // Rejected View
+-  if (userStatus === "rejected" && userRole !== "admin" && userRole !== "super-admin") {
++  if (userStatuΓÜí === "rejected" && userRole !== "admin" && userRole !== "super-admin") {
+     return (
+-      <div className={`${isDarkMode ? 'dark' : ''} antialiased h-screen w-full bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4 transition-colors duration-300`}>
++      <div className={`${isDarkMode ? 'dark' : ''} antialiased h-screen w-full bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4 transition-colorΓÜí duration-300`}>
+         <div className="max-w-md w-full bg-white dark:bg-slate-900 border border-red-200 dark:border-red-900 rounded-3xl p-8 shadow-xl shadow-red-500/5 text-center">
+           <div className="w-20 h-20 bg-red-50 dark:bg-red-900/20 rounded-3xl flex items-center justify-center text-red-500 mx-auto mb-6">
+             <XCircle className="w-10 h-10" />
+           </div>
+           <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Pendaftaran Ditolak</h1>
+           <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-8">
+-            Maaf, permohonan akses Anda ke aplikasi telah ditolak oleh administrator. Silakan hubungi admin untuk info selengkapnya.
++            Maaf, permohonan akseΓÜí Anda ke aplikasi telah ditolak oleh administrator. Silakan hubungi admin untuk info selengkapnya.
+           </p>
+           <button 
+             onClick={() => logout()}
+@@ -2010,16 +2395,16 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+   }
+ 
+   // Suspended View
+-  if (userStatus === "suspended") {
++  if (userStatuΓÜí === "suspended") {
+     return (
+-      <div className={`${isDarkMode ? 'dark' : ''} antialiased h-screen w-full bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4 transition-colors duration-300`}>
++      <div className={`${isDarkMode ? 'dark' : ''} antialiased h-screen w-full bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4 transition-colorΓÜí duration-300`}>
+         <div className="max-w-md w-full bg-white dark:bg-slate-900 border border-red-200 dark:border-red-900 rounded-3xl p-8 shadow-xl shadow-red-500/5 text-center">
+           <div className="w-20 h-20 bg-red-50 dark:bg-red-900/20 rounded-3xl flex items-center justify-center text-red-500 mx-auto mb-6">
+             <ShieldAlert className="w-10 h-10" />
+           </div>
+           <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Akun Ditangguhkan</h1>
+           <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-8">
+-            Akses Anda ke aplikasi telah dinonaktifkan oleh administrator. Silakan hubungi dukungan jika Anda merasa ini adalah kesalahan.
++            AkseΓÜí Anda ke aplikasi telah dinonaktifkan oleh administrator. Silakan hubungi dukungan jika Anda merasa ini adalah kesalahan.
+           </p>
+           <button 
+             onClick={() => logout()}
+@@ -2032,15 +2417,15 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+     );
+   }
+ 
+-  // Not Invited View (Access Denied for non-whitelist registrations)
+-  if (userStatus === "not_invited") {
++  // Not Invited View (AccesΓÜí Denied for non-whitelist registrations)
++  if (userStatuΓÜí === "not_invited") {
+     return (
+-      <div className={`${isDarkMode ? 'dark' : ''} antialiased h-screen w-full bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4 transition-colors duration-300`}>
++      <div className={`${isDarkMode ? 'dark' : ''} antialiased h-screen w-full bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4 transition-colorΓÜí duration-300`}>
+         <div className="max-w-md w-full bg-white dark:bg-slate-900 border border-red-100 dark:border-red-900/30 rounded-3xl p-8 shadow-xl shadow-red-500/5 text-center animate-in fade-in zoom-in-95 duration-300">
+           <div className="w-20 h-20 bg-red-50 dark:bg-red-950/40 rounded-3xl flex items-center justify-center text-red-500 mx-auto mb-6">
+             <ShieldAlert className="w-10 h-10" />
+           </div>
+-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2 font-sans tracking-tight">Akses Ditolak</h1>
++          <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2 font-sanΓÜí tracking-tight">AkseΓÜí Ditolak</h1>
+           <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-8">
+             Email <span className="font-bold text-slate-800 dark:text-slate-200">{user?.email}</span> belum terdaftar di whitelist. Silakan hubungi administrator untuk verifikasi.
+           </p>
+@@ -2056,8 +2441,8 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+   }
+ 
+   return (
+-    <div className={`${isDarkMode ? 'dark' : ''} antialiased font-sans transition-colors duration-300`}>
+-      <div className="flex h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-hidden transition-colors duration-300">
++    <div className={`${isDarkMode ? 'dark' : ''} antialiased font-sanΓÜí transition-colorΓÜí duration-300`}>
++      <div className="flex h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-hidden transition-colorΓÜí duration-300">
+         
+         {/* SIDEBAR */}
+         <nav className={`bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 shadow-sm h-screen w-64 flex flex-col fixed left-0 top-0 z-40 transform transition-transform duration-300 ${showMobileMenu ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
+@@ -2066,7 +2451,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+               <h1 className="font-bold text-xl text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+                 <div className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center">
+                   <img src="/icon.png" alt="Logo" className="w-full h-full object-contain" onError={(e) => {
+-                    (e.target as HTMLImageElement).src = 'https://aidukasi.net/wp-content/uploads/2023/12/logo-bulat.png';
++                    (e.target aΓÜí HTMLImageElement).src = 'https://aidukasi.net/wp-content/uploads/2023/12/logo-bulat.png';
+                   }} />
+                 </div>
+                 LKPD Pro
+@@ -2075,7 +2460,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+                 <ArrowLeft className="w-5 h-5"/>
+               </button>
+             </div>
+-            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-1">Educator Workspace</p>
++            <p className="text-xΓÜí font-semibold text-slate-500 dark:text-slate-400 mt-1">Educator Workspace</p>
+           </div>
+           
+           <div className="px-4 py-6 flex flex-col gap-2">
+@@ -2083,7 +2468,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+               onClick={handleCreateNew}
+               className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-3 px-4 flex items-center justify-center gap-2 font-bold text-sm shadow-md shadow-blue-600/20 transition-all active:scale-95"
+             >
+-              <Plus className="w-4 h-4" /> LKPD Baru
++              <PluΓÜí className="w-4 h-4" /> LKPD Baru
+             </button>
+             <button 
+               onClick={() => setView("dashboard")}
+@@ -2093,16 +2478,16 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+             </button>
+             {userRole === "super-admin" && (
+               <button 
+-                onClick={() => setView("agency_management" as any)}
+-                className={`w-full border rounded-xl py-2.5 px-4 flex items-center justify-center gap-2 font-bold text-sm transition-all active:scale-95 ${view as string === 'agency_management' ? 'bg-slate-100 border-slate-300 dark:bg-slate-800 dark:border-slate-700 text-blue-600' : 'bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50'}`}
++                onClick={() => setView("agency_management" aΓÜí any)}
++                className={`w-full border rounded-xl py-2.5 px-4 flex items-center justify-center gap-2 font-bold text-sm transition-all active:scale-95 ${view aΓÜí string === 'agency_management' ? 'bg-slate-100 border-slate-300 dark:bg-slate-800 dark:border-slate-700 text-blue-600' : 'bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50'}`}
+               >
+                 <ShieldAlert className="w-4 h-4" /> Agency Management
+               </button>
+             )}
+             {userRole === "agency" && (
+               <button 
+-                onClick={() => setView("team_management" as any)}
+-                className={`w-full border rounded-xl py-2.5 px-4 flex items-center justify-center gap-2 font-bold text-sm transition-all active:scale-95 ${view as string === 'team_management' ? 'bg-slate-100 border-slate-300 dark:bg-slate-800 dark:border-slate-700 text-blue-600' : 'bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50'}`}
++                onClick={() => setView("team_management" aΓÜí any)}
++                className={`w-full border rounded-xl py-2.5 px-4 flex items-center justify-center gap-2 font-bold text-sm transition-all active:scale-95 ${view aΓÜí string === 'team_management' ? 'bg-slate-100 border-slate-300 dark:bg-slate-800 dark:border-slate-700 text-blue-600' : 'bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50'}`}
+               >
+                  <User className="w-4 h-4" /> My Team
+               </button>
+@@ -2123,16 +2508,16 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+                 <li>
+                   <button 
+                     onClick={() => goToStep(1)}
+-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition-colors ${step === 1 ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
++                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition-colorΓÜí ${step === 1 ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                   >
+-                    <Settings className={`w-5 h-5 ${step === 1 ? 'text-blue-600 dark:text-blue-400' : ''}`} /> Parameters
++                    <SettingΓÜí className={`w-5 h-5 ${step === 1 ? 'text-blue-600 dark:text-blue-400' : ''}`} /> Parameters
+                   </button>
+                 </li>
+                 <li>
+                   <button 
+                     onClick={() => step >= 2 && goToStep(2)}
+                     disabled={step < 2}
+-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition-colors ${step === 2 ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed'}`}
++                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition-colorΓÜí ${step === 2 ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed'}`}
+                   >
+                     <FileText className={`w-5 h-5 ${step === 2 ? 'text-blue-600 dark:text-blue-400' : ''}`} /> Outline Review
+                   </button>
+@@ -2141,7 +2526,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+                   <button 
+                     onClick={() => step >= 3 && goToStep(3)}
+                     disabled={step < 3}
+-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition-colors ${step === 3 ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed'}`}
++                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition-colorΓÜí ${step === 3 ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed'}`}
+                   >
+                     <Code className={`w-5 h-5 ${step === 3 ? 'text-blue-600 dark:text-blue-400' : ''}`} /> Final Output
+                   </button>
+@@ -2156,7 +2541,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+                   <button 
+                     key={p.id}
+                     onClick={() => handleOpenProject(p)}
+-                    className="w-full flex items-center gap-3 px-4 py-2 rounded-xl text-xs text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all text-left"
++                    className="w-full flex items-center gap-3 px-4 py-2 rounded-xl text-xΓÜí text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all text-left"
+                   >
+                     <FolderOpen className="w-4 h-4 flex-shrink-0" />
+                     <span className="truncate">{p.title}</span>
+@@ -2178,7 +2563,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+             )}
+           </ul>
+ 
+-          {/* FOOTER LINKS */}
++          {/* FOOTER LINKΓÜí */}
+           <div className="px-6 py-4 flex flex-col gap-2">
+             <div className="flex flex-col gap-1.5 p-3 rounded-2xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100/50 dark:border-blue-800/30">
+               <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center mb-1">Our Ecosystem</p>
+@@ -2187,7 +2572,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+                   href="https://pakhusnul.id" 
+                   target="_blank" 
+                   rel="noopener noreferrer" 
+-                  className="text-[10px] sm:text-xs font-bold text-slate-500 hover:text-blue-600 transition-colors"
++                  className="text-[10px] sm:text-xΓÜí font-bold text-slate-500 hover:text-blue-600 transition-colors"
+                 >
+                   pakhusnul.id
+                 </a>
+@@ -2196,7 +2581,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+                   href="https://aidukasi.net" 
+                   target="_blank" 
+                   rel="noopener noreferrer" 
+-                  className="text-[10px] sm:text-xs font-bold text-slate-500 hover:text-blue-600 transition-colors"
++                  className="text-[10px] sm:text-xΓÜí font-bold text-slate-500 hover:text-blue-600 transition-colors"
+                 >
+                   aidukasi.net
+                 </a>
+@@ -2230,14 +2615,14 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+                       <span className="text-purple-600 font-bold">Super Admin</span>
+                     ) : (
+                       <>
+-                        <span className="capitalize">{userProfile?.licenseStatus && userProfile.licenseStatus !== 'none' ? userProfile.licenseStatus : 'Standard'}</span>
+-                        {userProfile?.licenseStatus && userProfile.licenseStatus !== 'none' && userProfile.licenseStatus !== 'unlimited' && userRole !== 'admin' && (
++                        <span className="capitalize">{userProfile?.licenseStatuΓÜí && userProfile.licenseStatuΓÜí !== 'none' ? userProfile.licenseStatuΓÜí : 'Standard'}</span>
++                        {userProfile?.licenseStatuΓÜí && userProfile.licenseStatuΓÜí !== 'none' && userProfile.licenseStatuΓÜí !== 'unlimited' && userRole !== 'admin' && (
+                           <span className="text-blue-600 font-bold">({userProfile?.usageCount || 0}/{userProfile?.userQuota || 10})</span>
+                         )}
+-                        {userProfile?.licenseStatus === 'unlimited' && (
++                        {userProfile?.licenseStatuΓÜí === 'unlimited' && (
+                           <span className="text-purple-600 font-bold">(Unlimited)</span>
+                         )}
+-                        {!userProfile?.licenseStatus || userProfile.licenseStatus === 'none' && (
++                        {!userProfile?.licenseStatuΓÜí || userProfile.licenseStatuΓÜí === 'none' && (
+                           <span className="text-slate-400">({projects.length}/10)</span>
+                         )}
+                       </>
+@@ -2247,7 +2632,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+               </div>
+               <button 
+                 onClick={() => logout()}
+-                className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg text-xs font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors border border-transparent hover:border-red-100 dark:hover:border-red-900/30"
++                className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg text-xΓÜí font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colorΓÜí border border-transparent hover:border-red-100 dark:hover:border-red-900/30"
+               >
+                 <LogOut className="w-3.5 h-3.5" /> Keluar Aplikasi
+               </button>
+@@ -2276,17 +2661,17 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+               
+               <div className="hidden sm:flex items-center gap-2">
+                 <div className={`flex items-center text-sm font-semibold ${step >= 1 ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'}`}>
+-                  <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs mr-2 ${step >= 1 ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>1</span>
++                  <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xΓÜí mr-2 ${step >= 1 ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>1</span>
+                   Setup
+                 </div>
+                 <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 mx-1" />
+                 <div className={`flex items-center text-sm font-semibold ${step >= 2 ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'}`}>
+-                  <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs mr-2 ${step >= 2 ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>2</span>
++                  <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xΓÜí mr-2 ${step >= 2 ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>2</span>
+                   Outline
+                 </div>
+                 <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 mx-1" />
+                 <div className={`flex items-center text-sm font-semibold ${step >= 3 ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'}`}>
+-                  <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs mr-2 ${step >= 3 ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>3</span>
++                  <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xΓÜí mr-2 ${step >= 3 ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>3</span>
+                   Final Output
+                 </div>
+               </div>
+@@ -2302,7 +2687,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+                         projectUsage.isCritical ? 'text-red-500 animate-pulse' : 
+                         projectUsage.isWarning ? 'text-amber-500' : 'text-slate-400'
+                       }`}>
+-                        {projectUsage.isCritical ? 'Kapasitas Kritis' : projectUsage.isWarning ? 'Kapasitas Terisi' : 'Kapasitas Proyek'}
++                        {projectUsage.isCritical ? 'KapasitaΓÜí Kritis' : projectUsage.isWarning ? 'KapasitaΓÜí Terisi' : 'KapasitaΓÜí Proyek'}
+                       </span>
+                       <span className="text-[10px] font-mono text-slate-500">{projectUsage.kb} KB / 1MB</span>
+                     </div>
+@@ -2326,19 +2711,19 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+                     onClick={handleSaveProject}
+                     disabled={isSaving}
+                     className={`flex items-center gap-2 px-4 py-2 text-white rounded-xl text-sm font-bold shadow-md transition-all active:scale-95 disabled:opacity-70 ${
+-                      saveSuccess 
++                      saveSuccesΓÜí 
+                         ? 'bg-blue-600 shadow-blue-600/20' 
+                         : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20'
+                     }`}
+                   >
+                     {isSaving ? (
+                       <Loader2 className="w-4 h-4 animate-spin" />
+-                    ) : saveSuccess ? (
++                    ) : saveSuccesΓÜí ? (
+                       <Check className="w-4 h-4" />
+                     ) : (
+                       <Save className="w-4 h-4" />
+                     )}
+-                    {saveSuccess ? 'Berhasil' : (projectId ? 'Update' : 'Simpan')}
++                    {saveSuccesΓÜí ? 'Berhasil' : (projectId ? 'Update' : 'Simpan')}
+                   </button>
+                 </>
+               )}
+@@ -2357,7 +2742,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+               <div className="max-w-3xl mx-auto p-4 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                 <div className="mb-8">
+                   <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">API Settings</h1>
+-                  <p className="text-slate-500">Gunakan API Key Anda sendiri untuk proses generate. Sistem mendukung failover otomatis jika salah satu key mencapai batas kuota.</p>
++                  <p className="text-slate-500">Gunakan API Key Anda sendiri untuk proseΓÜí generate. Sistem mendukung failover otomatiΓÜí jika salah satu key mencapai bataΓÜí kuota.</p>
+                 </div>
+ 
+                 <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 md:p-8 shadow-sm">
+@@ -2367,7 +2752,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+                     </div>
+                     <div>
+                       <p className="text-sm font-bold text-blue-800 dark:text-blue-300">Cara Mendapatkan API Key?</p>
+-                      <p className="text-xs text-blue-600 dark:text-blue-400">Dapatkan key gratis di <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="font-bold underline hover:text-blue-700">Google AI Studio</a>. Anda bisa memasukkan hingga 3 key berbeda.</p>
++                      <p className="text-xΓÜí text-blue-600 dark:text-blue-400">Dapatkan key gratiΓÜí di <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="font-bold underline hover:text-blue-700">Google AI Studio</a>. Anda bisa memasukkan hingga 3 key berbeda.</p>
+                     </div>
+                   </div>
+ 
+@@ -2411,7 +2796,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+                   <div>
+                     <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-1">Project Dashboard</h1>
+-                    <p className="text-slate-500">Kelola dan akses kembali desain LKPD yang telah Anda buat.</p>
++                    <p className="text-slate-500">Kelola dan akseΓÜí kembali desain LKPD yang telah Anda buat.</p>
+                   </div>
+                   <div className="relative">
+                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+@@ -2425,7 +2810,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+                   </div>
+                 </div>
+ 
+-                {isLoadingProjects ? (
++                {isLoadingProjectΓÜí ? (
+                   <div className="flex flex-col items-center justify-center py-20 gap-4">
+                     <Loader2 className="w-12 h-12 animate-spin text-blue-600" />
+                     <p className="text-slate-400 font-medium">Memuat daftar project...</p>
+@@ -2511,9 +2896,9 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+                   </div>
+                 )}
+               </div>
+-            ) : (view as string) === "agency_management" ? (
++            ) : (view aΓÜí string) === "agency_management" ? (
+               <AgencyManager isDarkMode={isDarkMode} />
+-            ) : (view as string) === "team_management" ? (
++            ) : (view aΓÜí string) === "team_management" ? (
+               <TeamManager userProfile={userProfile} />
+             ) : (
+               <div className={`mx-auto p-4 md:p-8 transition-all duration-500 ${step === 3 ? 'max-w-full' : 'max-w-6xl'}`}>
+@@ -2530,9 +2915,12 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+                 onSwiper={(swiper) => {
+                   console.log("Swiper initialized");
+                   swiperRef.current = swiper;
+-                  // Recalculate height after React has rendered conditional content
+-                  setTimeout(() => swiper.updateAutoHeight(300), 200);
+-                  setTimeout(() => swiper.updateAutoHeight(300), 800);
++                  // Recalculate height after React haΓÜí rendered conditional content
++                  const safeUpdate = (s: typeof swiper, delay: number) => setTimeout(() => {
++                    try { if (ΓÜí && s.params) s.updateAutoHeight(300); } catch(_) {}
++                  }, delay);
++                  safeUpdate(swiper, 200);
++                  safeUpdate(swiper, 800);
+                 }}
+                 onSlideChange={(swiper) => {
+                   console.log("Slide changed to:", swiper.activeIndex + 1);
+@@ -2562,7 +2950,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+                         <div className="flex flex-col gap-1.5 mb-4">
+                           <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                             <FileSymlink className="w-4 h-4 text-emerald-500" />
+-                            Kontinuitas Proyek (Opsional)
++                            KontinuitaΓÜí Proyek (Opsional)
+                           </label>
+                           <select 
+                             name="referensiProyek" value={formData.referensiProyek} onChange={handleChange}
+@@ -2598,29 +2986,29 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+                             </select>
+                           </div>
+                           
+-                          {JENJANG_MAP[formData.jenjang]?.fases && (
++                          {JENJANG_MAP[formData.jenjang]?.faseΓÜí && (
+                             <div className="flex flex-col gap-1.5">
+                               <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Fase</label>
+                               <select 
+                                 name="fase" value={formData.fase} onChange={handleFaseChange} 
+                                 className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 rounded-xl px-4 py-2.5 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none"
+                               >
+-                                {Object.keys(JENJANG_MAP[formData.jenjang]?.fases || {}).map(f => <option key={f}>{f}</option>)}
++                                {Object.keys(JENJANG_MAP[formData.jenjang]?.faseΓÜí || {}).map(f => <option key={f}>{f}</option>)}
+                               </select>
+                             </div>
+                           )}
+ 
+                           <div className="flex flex-col gap-1.5">
+                             <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+-                              {JENJANG_MAP[formData.jenjang]?.fases ? "Kelas" : "Kategori/Level"}
++                              {JENJANG_MAP[formData.jenjang]?.faseΓÜí ? "Kelas" : "Kategori/Level"}
+                             </label>
+                             <select 
+                               name="kelas" value={formData.kelas} onChange={handleChange} 
+                               className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 rounded-xl px-4 py-2.5 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none"
+                             >
+-                              {JENJANG_MAP[formData.jenjang]?.fases 
++                              {JENJANG_MAP[formData.jenjang]?.faseΓÜí 
+                                 ? (JENJANG_MAP[formData.jenjang]?.fases?.[formData.fase] || []).map((k: string) => <option key={k}>{k}</option>)
+-                                : (JENJANG_MAP[formData.jenjang]?.types || []).map((t: string) => <option key={t}>{t}</option>)
++                                : (JENJANG_MAP[formData.jenjang]?.typeΓÜí || []).map((t: string) => <option key={t}>{t}</option>)
+                               }
+                             </select>
+                           </div>
+@@ -2631,7 +3019,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+                             <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Topik Spesifik</label>
+                             <button 
+                               onClick={handleSuggestMateri} disabled={isSuggestingMateri}
+-                              className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-bold flex items-center gap-1 transition-colors bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded-md"
++                              className="text-xΓÜí text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-bold flex items-center gap-1 transition-colorΓÜí bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded-md"
+                             >
+                               {isSuggestingMateri ? <Loader2 className="w-3 h-3 animate-spin"/> : <Lightbulb className="w-3 h-3"/>} Ide Topik
+                             </button>
+@@ -2643,17 +3031,30 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+                         </div>
+ 
+                         <div className="grid grid-cols-12 gap-4">
+-                          <div className="flex flex-col gap-1.5 col-span-4">
+-                            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+-                              Jml Hal. <div title="Lembar siswa murni."><BadgeInfo className="w-3.5 h-3.5 text-slate-400" /></div>
++                          <div className="flex flex-col gap-1.5 col-span-4 sm:col-span-3">
++                            <label className="text-[13px] font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1">
++                              Hal. Siswa <div title="Lembar siswa murni."><BadgeInfo className="w-3.5 h-3.5 text-slate-400" /></div>
+                             </label>
+                             <input 
+                               type="number" name="halaman" value={formData.halaman} onChange={handleChange} min="1" max="20" 
+                               className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 rounded-xl px-4 py-2.5 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none text-center" 
+                             />
+                           </div>
++
++                          {formData.tipeKonten !== 'MATERI' && (
++                            <div className="flex flex-col gap-1.5 col-span-4 sm:col-span-3">
++                              <label className="text-[13px] font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1">
++                                Hal. Guru <div title="Kunci jawaban & rubrik."><BadgeInfo className="w-3.5 h-3.5 text-slate-400" /></div>
++                              </label>
++                              <input 
++                                type="number" name="halamanGuru" value={formData.halamanGuru} onChange={handleChange} min="0" max="10" 
++                                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 rounded-xl px-4 py-2.5 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none text-center" 
++                              />
++                            </div>
++                          )}
++
+                           {(!formData.drillingMode && formData.tipeKonten !== 'DRILLING' && formData.tipeKonten !== 'MATERI') && (
+-                            <div className="flex flex-col gap-1.5 col-span-8 animate-in slide-in-from-top-2">
++                            <div className="flex flex-col gap-1.5 col-span-12 sm:col-span-6 animate-in slide-in-from-top-2">
+                               <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Rasio Materi : Latihan</label>
+                               <input 
+                                 list="rasio-options"
+@@ -2667,7 +3068,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+                               <datalist id="rasio-options">
+                                 <option value="30:70 (Banyak Latihan)"></option>
+                                 <option value="50:50 (Seimbang)"></option>
+-                                <option value="20:80 (Fokus Latihan)"></option>
++                                <option value="20:80 (FokuΓÜí Latihan)"></option>
+                               </datalist>
+                             </div>
+                           )}
+@@ -2684,9 +3085,9 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+                             />
+                             <div className="flex flex-col">
+                               <span className={`text-sm font-bold ${formData.sertakanCover ? 'text-purple-700 dark:text-purple-400' : 'text-slate-700 dark:text-slate-200'}`}>
+-                                ≡ƒÄ¿ Sertakan Halaman Cover
++                                ├â┬░├à┬╕├à┬╜├é┬¿ Sertakan Halaman Cover
+                               </span>
+-                              <span className="text-xs text-slate-500 dark:text-slate-400">
++                              <span className="text-xΓÜí text-slate-500 dark:text-slate-400">
+                                 Halaman pertama akan dijadikan sampul menarik tanpa konten materi/soal.
+                               </span>
+                             </div>
+@@ -2716,9 +3117,9 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+                                   />
+                                   <div className={`p-3 rounded-xl border-2 transition-all flex flex-col items-center justify-center text-center h-full ${isActive ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20 shadow-sm' : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
+                                     <span className={`text-sm font-bold ${isActive ? 'text-blue-800 dark:text-blue-300' : 'text-slate-700 dark:text-slate-300'}`}>
+-                                      {tipe.id === 'STANDAR' && '≡ƒôÜ '}
+-                                      {tipe.id === 'DRILLING' && 'ΓÜí '}
+-                                      {tipe.id === 'MATERI' && '≡ƒôû '}
++                                      {tipe.id === 'STANDAR' && '├â┬░├à┬╕├óΓé¼┼ô├à┬í '}
++                                      {tipe.id === 'DRILLING' && '├â┬ó├à┬í├é┬í '}
++                                      {tipe.id === 'MATERI' && '├â┬░├à┬╕├óΓé¼┼ô├óΓé¼ΓÇ£ '}
+                                       {tipe.title}
+                                     </span>
+                                     <span className="text-[10px] text-slate-500 mt-1">{tipe.desc}</span>
+@@ -2771,9 +3172,9 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+                           </div>
+                           <div className="flex flex-col gap-1.5 md:col-span-2 mt-2">
+                             <div className="flex justify-between items-center">
+-                              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Teks Custom Footer</label>
+-                              <button onClick={handleSuggestFooter} disabled={isSuggestingFooter} className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 font-bold flex items-center gap-1">
+-                                {isSuggestingFooter ? <Loader2 className="w-3 h-3 animate-spin"/> : 'Γ£¿'} Slogan AI
++                              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">TekΓÜí Custom Footer</label>
++                              <button onClick={handleSuggestFooter} disabled={isSuggestingFooter} className="text-xΓÜí text-blue-600 dark:text-blue-400 hover:text-blue-800 font-bold flex items-center gap-1">
++                                {isSuggestingFooter ? <Loader2 className="w-3 h-3 animate-spin"/> : '├â┬ó├àΓÇ£├é┬¿'} Slogan AI
+                               </button>
+                             </div>
+                             <input type="text" name="footerText" value={formData.footerText} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 rounded-xl px-4 py-2.5 outline-none focus:border-blue-500" placeholder="Belajar itu menyenangkan!" />
+@@ -2797,9 +3198,9 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+                           />
+                           <div className="flex flex-col">
+                             <span className={`text-sm font-bold ${formData.enableUpsell ? 'text-amber-700 dark:text-amber-400' : 'text-slate-700 dark:text-slate-200'}`}>
+-                              ≡ƒÜÇ Sertakan Halaman Upsell/Kredit
++                              ├â┬░├à┬╕├à┬í├óΓÇÜ┬¼ Sertakan Halaman Upsell/Kredit
+                             </span>
+-                            <span className="text-xs text-slate-500 dark:text-slate-400">
++                            <span className="text-xΓÜí text-slate-500 dark:text-slate-400">
+                               Tambahkan halaman ekstra di akhir untuk mempromosikan grup WA, web, atau produk Anda.
+                             </span>
+                           </div>
+@@ -2848,7 +3249,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+                               <input type="checkbox" name="upsellIncludeQr" checked={formData.upsellIncludeQr} onChange={(e) => setFormData({...formData, upsellIncludeQr: e.target.checked})} className="w-4 h-4 accent-amber-500 rounded" />
+                               <div className="flex flex-col">
+                                 <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Tampilkan QR Code Otomatis</span>
+-                                <span className="text-xs text-slate-500 dark:text-slate-400">AI akan menggambar placeholder QR mengarah ke Target URL di atas</span>
++                                <span className="text-xΓÜí text-slate-500 dark:text-slate-400">AI akan menggambar placeholder QR mengarah ke Target URL di atas</span>
+                               </div>
+                             </label>
+                           </div>
+@@ -2860,14 +3261,14 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+                     <div className="lg:col-span-5 flex flex-col gap-6">
+                       <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 md:p-6 border border-slate-200 dark:border-slate-800 shadow-sm">
+                         <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-100 dark:border-slate-800">
+-                          <Settings className="w-5 h-5 text-blue-600 dark:text-blue-400" />
++                          <SettingΓÜí className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                           <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Tingkat Kesulitan</h2>
+                         </div>
+                         <div className="flex flex-col gap-3">
+                           {[
+                             { id: 'REMEDIAL', title: 'Guided (Remedial)', desc: 'Lebih banyak petunjuk visual.', icon: Smile },
+                             { id: 'STANDAR', title: 'Standard (Medium)', desc: 'Kombinasi latihan mandiri.', icon: Brain },
+-                            { id: 'HOTS', title: 'Challenge (HOTS)', desc: 'Fokus pada penalaran kompleks.', icon: Zap }
++                            { id: 'HOTS', title: 'Challenge (HOTS)', desc: 'FokuΓÜí pada penalaran kompleks.', icon: Zap }
+                           ].map(mode => (
+                             <label key={mode.id} className="cursor-pointer relative">
+                               <input type="radio" name="difficulty" checked={formData.mode === mode.id} onChange={() => setFormData({...formData, mode: mode.id})} className="peer sr-only" />
+@@ -2875,7 +3276,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+                                 <mode.icon className={`mt-0.5 w-5 h-5 ${formData.mode === mode.id ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'}`} />
+                                 <div>
+                                   <h3 className={`font-bold text-sm ${formData.mode === mode.id ? 'text-blue-800 dark:text-blue-300' : 'text-slate-800 dark:text-slate-200'}`}>{mode.title}</h3>
+-                                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{mode.desc}</p>
++                                  <p className="text-xΓÜí text-slate-500 dark:text-slate-400 mt-1">{mode.desc}</p>
+                                 </div>
+                               </div>
+                             </label>
+@@ -2898,10 +3299,10 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+                             <label key={theme.id} className="cursor-pointer">
+                               <input type="radio" name="theme" checked={formData.visual === theme.id} onChange={() => setFormData({...formData, visual: theme.id})} className="peer sr-only" />
+                               <div className={`border-2 rounded-xl p-3 text-center transition-all ${formData.visual === theme.id ? 'border-blue-600 ring-2 ring-blue-100 dark:ring-blue-900/30' : 'border-slate-200 dark:border-slate-700'}`}>
+-                                <div className={`w-full h-12 rounded-lg mb-2 flex items-center justify-center border ${theme.id==='CLEAN_MONO' ? theme.colorClass : `bg-gradient-to-br ${theme.colorClass} border-transparent`}`}>
++                                <div className={`w-full h-12 rounded-lg mb-2 flex items-center justify-center border ${theme.id==='CLEAN_MONO' ? theme.colorClasΓÜí : `bg-gradient-to-br ${theme.colorClass} border-transparent`}`}>
+                                   <theme.icon className="w-6 h-6" />
+                                 </div>
+-                                <span className={`text-xs font-bold ${formData.visual === theme.id ? 'text-blue-700 dark:text-blue-400' : 'text-slate-700 dark:text-slate-300'}`}>{theme.name}</span>
++                                <span className={`text-xΓÜí font-bold ${formData.visual === theme.id ? 'text-blue-700 dark:text-blue-400' : 'text-slate-700 dark:text-slate-300'}`}>{theme.name}</span>
+                               </div>
+                             </label>
+                           ))}
+@@ -2920,7 +3321,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+                             />
+                             {formData.visual && !['PLAYFUL_COLOR', 'CLEAN_MONO', 'NATURE_GREEN', 'OCEAN_BLUE'].includes(formData.visual) && (
+                               <div className="absolute right-3 top-1/2 -translate-y-1/2">
+-                                <Sparkles className="w-4 h-4 text-amber-500 animate-pulse" />
++                                <SparkleΓÜí className="w-4 h-4 text-amber-500 animate-pulse" />
+                               </div>
+                             )}
+                           </div>
+@@ -2949,16 +3350,16 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+ 
+                           <div className="flex flex-col gap-1.5 mt-2 group relative">
+                             <div className="flex justify-between items-center">
+-                              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Pesan Khusus AI</label>
++                              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Pesan KhusuΓÜí AI</label>
+                               <div className="flex items-center gap-2">
+                                 <button 
+                                   onClick={() => setIsExpandedMagicPrompt(!isExpandedMagicPrompt)}
+-                                  className="p-1 px-1.5 bg-slate-100 dark:bg-slate-800 rounded-md text-slate-400 hover:text-blue-500 transition-colors border border-slate-200 dark:border-slate-700"
++                                  className="p-1 px-1.5 bg-slate-100 dark:bg-slate-800 rounded-md text-slate-400 hover:text-blue-500 transition-colorΓÜí border border-slate-200 dark:border-slate-700"
+                                 >
+-                                  {isExpandedMagicPrompt ? <RefreshCw className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
++                                  {isExpandedMagicPrompt ? <RefreshCw className="w-3 h-3" /> : <PluΓÜí className="w-3 h-3" />}
+                                 </button>
+-                                <button onClick={handleSuggestVisual} disabled={isSuggestingVisual} className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 font-bold flex items-center gap-1 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded-md">
+-                                  {isSuggestingVisual ? <Loader2 className="w-3 h-3 animate-spin"/> : 'Γ£¿'} Magic Prompt
++                                <button onClick={handleSuggestVisual} disabled={isSuggestingVisual} className="text-xΓÜí text-blue-600 dark:text-blue-400 hover:text-blue-800 font-bold flex items-center gap-1 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded-md">
++                                  {isSuggestingVisual ? <Loader2 className="w-3 h-3 animate-spin"/> : '├â┬ó├àΓÇ£├é┬¿'} Magic Prompt
+                                 </button>
+                               </div>
+                             </div>
+@@ -2987,7 +3388,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+                     {!isUserKeyReady && !isAutoinjected && (
+                       <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl flex items-center gap-3 max-w-md animate-in slide-in-from-right-4">
+                         <ShieldAlert className="w-5 h-5 text-amber-600 flex-shrink-0" />
+-                        <p className="text-xs text-amber-700 dark:text-amber-400 font-medium">
++                        <p className="text-xΓÜí text-amber-700 dark:text-amber-400 font-medium">
+                           <b>API Key Diperlukan:</b> Harap hubungkan API Key di menu 
+                           <button onClick={() => setView('api_settings')} className="mx-1 font-bold underline">API Settings</button> 
+                           karena sistem saat ini menggunakan mode BYOK.
+@@ -3022,7 +3423,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+                         rows={isExpandedRevisionOutline ? 4 : 1}
+                         onInput={(e) => {
+                           if (!isExpandedRevisionOutline) {
+-                            const target = e.target as HTMLTextAreaElement;
++                            const target = e.target aΓÜí HTMLTextAreaElement;
+                             target.style.height = 'auto';
+                             target.style.height = target.scrollHeight + 'px';
+                           }
+@@ -3033,7 +3434,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+                           onClick={() => setIsExpandedRevisionOutline(!isExpandedRevisionOutline)}
+                           className="p-2 bg-white/80 dark:bg-slate-800/80 rounded-lg border border-slate-100 dark:border-slate-700 opacity-0 group-hover:opacity-100 transition-opacity"
+                         >
+-                          {isExpandedRevisionOutline ? <RefreshCw className="w-3.5 h-3.5 rotate-180" /> : <Plus className="w-3.5 h-3.5" />}
++                          {isExpandedRevisionOutline ? <RefreshCw className="w-3.5 h-3.5 rotate-180" /> : <PluΓÜí className="w-3.5 h-3.5" />}
+                         </button>
+                         <button 
+                           onClick={handleReviseOutline} disabled={isRevising || !revisionInput.trim()}
+@@ -3074,7 +3475,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+                                   <li key={tab} className="flex-shrink-0">
+                                     <button 
+                                       onClick={() => setActiveTab(tab)} 
+-                                      className={`min-w-[100px] lg:w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-xs lg:text-sm font-medium transition-all ${activeTab === tab ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20 scale-[1.02]' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
++                                      className={`min-w-[100px] lg:w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-xΓÜí lg:text-sm font-medium transition-all ${activeTab === tab ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20 scale-[1.02]' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                                     >
+                                       <span className="truncate">{tab === 'Upsell' ? 'Hal Upsell' : `Hal ${tab}`}</span>
+                                       {pageData[tab]?.data ? <CheckCircle className="w-3.5 h-3.5 text-emerald-400" /> : <div className="w-1.5 h-1.5 rounded-full bg-slate-200 dark:bg-slate-700"></div>}
+@@ -3090,7 +3491,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+                                   <li key={tab} className="flex-shrink-0">
+                                     <button 
+                                       onClick={() => setActiveTab(tab)} 
+-                                      className={`min-w-[100px] lg:w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-xs lg:text-sm font-medium transition-all ${activeTab === tab ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20 scale-[1.02]' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
++                                      className={`min-w-[100px] lg:w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-xΓÜí lg:text-sm font-medium transition-all ${activeTab === tab ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20 scale-[1.02]' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                                     >
+                                       <span className="truncate">{tab}</span>
+                                       {pageData[tab]?.data ? <CheckCircle className="w-3.5 h-3.5 text-emerald-400" /> : <div className="w-1.5 h-1.5 rounded-full bg-slate-200 dark:bg-slate-700"></div>}
+@@ -3112,6 +3513,20 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+                           </span>
+                         </h3>
+                         <div className="flex items-center gap-2">
++                          <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl mr-2">
++                            <button
++                              onClick={() => setPreviewMode('json')}
++                              className={`px-3 py-1.5 text-xΓÜí font-bold rounded-lg transition-all ${previewMode === 'json' ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-800 dark:text-slate-200' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
++                            >
++                              JSON
++                            </button>
++                            <button
++                              onClick={() => setPreviewMode('wireframe')}
++                              className={`px-3 py-1.5 text-xΓÜí font-bold rounded-lg transition-all ${previewMode === 'wireframe' ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-800 dark:text-slate-200' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
++                            >
++                              Preview
++                            </button>
++                          </div>
+                           <button 
+                             onClick={() => handleGenerateSinglePage(activeTab)}
+                             disabled={pageData[activeTab]?.loading}
+@@ -3122,7 +3537,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+                           </button>
+                           <button 
+                             onClick={() => pageData[activeTab]?.data && copyToClipboard(JSON.stringify(pageData[activeTab].data, null, 2))}
+-                            className={`flex items-center justify-center gap-2 px-3 sm:px-5 py-2.5 border rounded-xl transition-all font-bold text-xs sm:text-sm ${
++                            className={`flex items-center justify-center gap-2 px-3 sm:px-5 py-2.5 border rounded-xl transition-all font-bold text-xΓÜí sm:text-sm ${
+                               copied 
+                                 ? 'bg-emerald-500 border-emerald-600 text-white shadow-lg' 
+                                 : 'bg-blue-600 border-blue-700 text-white hover:bg-blue-700 shadow-md shadow-blue-500/20 active:scale-95'
+@@ -3149,14 +3564,14 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+                             <div className="w-20 h-20 bg-blue-50 dark:bg-blue-900/20 rounded-3xl flex items-center justify-center text-blue-300 dark:text-blue-500 group">
+                               <FileSymlink className="w-10 h-10 transition-transform group-hover:scale-110" />
+                             </div>
+-                            <div className="text-center max-w-xs px-6">
++                            <div className="text-center max-w-xΓÜí px-6">
+                               <h4 className="font-bold text-slate-800 dark:text-slate-100 mb-2 underline decoration-blue-500/30 underline-offset-4">Belum ada data layout</h4>
+-                              <p className="text-xs text-slate-500 mb-6 leading-relaxed">Silakan klik tombol di bawah untuk menghasilkan prompt JSON untuk halaman ini menggunakan AI.</p>
++                              <p className="text-xΓÜí text-slate-500 mb-6 leading-relaxed">Silakan klik tombol di bawah untuk menghasilkan prompt JSON untuk halaman ini menggunakan AI.</p>
+                               <button 
+                                 onClick={() => handleGenerateSinglePage(activeTab)}
+                                 className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3.5 rounded-xl font-bold shadow-lg shadow-blue-600/30 transition-all active:scale-95 flex items-center gap-2 mx-auto"
+                               >
+-                                ≡ƒÜÇ Hasilkan JSON {activeTab}
++                                ├â┬░├à┬╕├à┬í├óΓÇÜ┬¼ Hasilkan JSON {activeTab}
+                               </button>
+                             </div>
+                           </div>
+@@ -3169,8 +3584,8 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+                             </div>
+                             <div className="text-center flex flex-col items-center gap-4">
+                               <div>
+-                                <span className="text-sm font-bold text-blue-600 block mb-1">Menganalisis Kurikulum...</span>
+-                                <span className="text-xs text-slate-400">Sedang menyusun layout {activeTab}</span>
++                                <span className="text-sm font-bold text-blue-600 block mb-1">MenganalisiΓÜí Kurikulum...</span>
++                                <span className="text-xΓÜí text-slate-400">Sedang menyusun layout {activeTab}</span>
+                               </div>
+                               
+                               <button 
+@@ -3182,10 +3597,14 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+                             </div>
+                           </div>
+                         )}
+-                        <div className="absolute inset-0 overflow-auto custom-scrollbar p-6 pb-24">
+-                          <pre className="text-sm font-mono leading-relaxed text-slate-800 dark:text-slate-300 whitespace-pre">
+-                            {pageData[activeTab]?.data ? JSON.stringify(pageData[activeTab].data, null, 2) : ''}
+-                          </pre>
++                        <div className="absolute inset-0 overflow-auto custom-scrollbar p-6 pb-24 bg-slate-50/50 dark:bg-[#0D1117]">
++                          {previewMode === 'wireframe' && pageData[activeTab]?.data ? (
++                            <WireframePreview data={pageData[activeTab].data} />
++                          ) : (
++                            <pre className="text-sm font-mono leading-relaxed text-slate-800 dark:text-slate-300 whitespace-pre">
++                              {pageData[activeTab]?.data ? JSON.stringify(pageData[activeTab].data, null, 2) : ''}
++                            </pre>
++                          )}
+                         </div>
+ 
+                         {/* REVISION CHAT BAR */}
+@@ -3193,7 +3612,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+                           <div className={`absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-white via-white/95 to-transparent dark:from-slate-900 dark:via-slate-900/95 z-30 transition-all ${isExpandedRevisionPage ? 'h-1/2' : 'h-auto'}`}>
+                             <div className={`max-w-3xl mx-auto flex items-end gap-3 p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl shadow-blue-500/10 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all relative group ${isExpandedRevisionPage ? 'h-full flex-col p-4' : ''}`}>
+                               <div className={`flex-1 flex items-start px-2 py-1 overflow-y-auto ${isExpandedRevisionPage ? 'w-full' : ''}`}>
+-                                <Sparkles className="w-4 h-4 text-blue-500 mt-1 mr-2 flex-shrink-0" />
++                                <SparkleΓÜí className="w-4 h-4 text-blue-500 mt-1 mr-2 flex-shrink-0" />
+                                 <textarea 
+                                   value={revisionInput}
+                                   onChange={(e) => setRevisionInput(e.target.value)}
+@@ -3205,12 +3624,12 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+                                   }}
+                                   onInput={(e) => {
+                                     if (!isExpandedRevisionPage) {
+-                                      const target = e.target as HTMLTextAreaElement;
++                                      const target = e.target aΓÜí HTMLTextAreaElement;
+                                       target.style.height = 'auto';
+                                       target.style.height = Math.min(target.scrollHeight, 150) + 'px';
+                                     }
+                                   }}
+-                                  placeholder="Minta revisi... (Shift+Enter untuk baris baru)"
++                                  placeholder="Minta revisi... (Shift+Enter untuk bariΓÜí baru)"
+                                   className={`w-full bg-transparent border-none outline-none text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400 resize-none py-0.5 ${isExpandedRevisionPage ? 'h-full' : 'max-h-[150px]'}`}
+                                   rows={1}
+                                 />
+@@ -3218,10 +3637,10 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
+                               <div className={`flex gap-3 items-center ${isExpandedRevisionPage ? 'w-full justify-between pt-2 border-t border-slate-100 dark:border-slate-700' : ''}`}>
+                                 <button 
+                                   onClick={() => setIsExpandedRevisionPage(!isExpandedRevisionPage)}
+-                                  className="p-2 text-slate-400 hover:text-blue-500 transition-colors opacity-0 group-hover:opacity-100"
++                                  className="p-2 text-slate-400 hover:text-blue-500 transition-colorΓÜí opacity-0 group-hover:opacity-100"
+                                   title={isExpandedRevisionPage ? "Kecilkan" : "Perbesar"}
+                                 >
+-                                  {isExpandedRevisionPage ? <RefreshCw className="w-4 h-4 rotate-180" /> : <Plus className="w-4 h-4" />}
++                                  {isExpandedRevisionPage ? <RefreshCw className="w-4 h-4 rotate-180" /> : <PluΓÜí className="w-4 h-4" />}
+                                 </button>
+                                 <button 
+                                   onClick={handleRevisePageJSON}

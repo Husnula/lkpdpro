@@ -23,7 +23,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         // Assign Admin role to specific email
-        const role = user.email === "jagofeed@gmail.com" ? "super-admin" : "user";
+        const role = ["jagofeedmediatama@gmail.com", "bapakeathfar@gmail.com"].includes(user.email || "") ? "super-admin" : "user";
         // New users are pending by default, admins are active
         const defaultStatus = role === "super-admin" ? "active" : "pending";
 
@@ -55,7 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           };
 
           // Override for admin if necessary
-          if (user.email === "jagofeed@gmail.com") {
+          if (user.email && ["jagofeedmediatama@gmail.com", "bapakeathfar@gmail.com"].includes(user.email)) {
             userData.role = "super-admin";
             userData.status = "active";
           }

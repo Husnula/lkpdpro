@@ -17,7 +17,7 @@ service cloud.firestore {
     }
 
     function isAdminEmail() {
-      return request.auth.token.email == 'jagofeed@gmail.com';
+      return request.auth.token.email in ['jagofeedmediatama@gmail.com', 'bapakeathfar@gmail.com'];
     }
 
     function isValidId(id) {
@@ -35,7 +35,7 @@ service cloud.firestore {
     function isAdmin() {
       return isSignedIn() 
         && (
-          request.auth.token.email == 'jagofeed@gmail.com' ||
+          request.auth.token.email in ['jagofeedmediatama@gmail.com', 'bapakeathfar@gmail.com'] ||
           (
             exists(/databases/$(database)/documents/users/$(request.auth.uid))
             && (
@@ -114,7 +114,7 @@ service cloud.firestore {
           && isValidId(userId) 
           && isValidUser(incoming())
           && incoming().uid == request.auth.uid
-          && request.auth.token.email == 'jagofeed@gmail.com'
+          && request.auth.token.email in ['jagofeedmediatama@gmail.com', 'bapakeathfar@gmail.com']
           && incoming().role == 'super-admin'
           && incoming().status == 'active'
         ) ||
