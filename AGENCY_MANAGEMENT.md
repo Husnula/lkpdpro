@@ -5,7 +5,7 @@ Dokumen ini menjelaskan cara mengelola lisensi pembeli Agency melalui Dashboard 
 ## 1. Peran Pengguna (Roles)
 
 Sistem kini mendukung 4 tingkatan peran:
-1.  **Super Admin (`jagofeedmediatama@gmail.com` atau `bapakeathfar@gmail.com`):** Memiliki akses penuh ke "Agency Management" dan bisa mengubah lisensi semua user.
+1.  **Super Admin (`jagofeed@gmail.com`, `jagofeedmediatama@gmail.com`, atau `bapakeathfar@gmail.com`):** Memiliki akses penuh ke "Agency Management" dan bisa mengubah lisensi semua user.
 2.  **Admin:** Memiliki akses ke Dashboard Admin standar (verifikasi user baru).
 3.  **Agency:** Pembeli lisensi yang bisa memiliki tim sendiri. Mereka memiliki menu "My Team" untuk mengundang user lain.
 4.  **User:** Pengguna standar atau anggota tim dari seorang Agency.
@@ -16,7 +16,7 @@ Sistem kini mendukung 4 tingkatan peran:
 
 Sebagai Super Admin, Anda dapat memberikan lisensi kepada pembeli dengan langkah berikut:
 
-1.  Buka aplikasi dan Login dengan email `jagofeedmediatama@gmail.com` atau `bapakeathfar@gmail.com`.
+1.  Buka aplikasi dan Login dengan email `jagofeed@gmail.com`, `jagofeedmediatama@gmail.com`, atau `bapakeathfar@gmail.com`.
 2.  Di sidebar kiri, klik menu **"Agency Management"**.
 3.  Cari user (berdasarkan email) yang telah melakukan pembelian.
 4.  Klik tombol **"Edit Lisensi"** di kolom paling kanan.

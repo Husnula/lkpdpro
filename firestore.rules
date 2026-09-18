@@ -17,7 +17,7 @@ service cloud.firestore {
     }
 
     function isAdminEmail() {
-      return request.auth.token.email in ['jagofeedmediatama@gmail.com', 'bapakeathfar@gmail.com'];
+      return request.auth.token.email in ['jagofeed@gmail.com', 'jagofeedmediatama@gmail.com', 'bapakeathfar@gmail.com'];
     }
 
     function isValidId(id) {
@@ -35,7 +35,7 @@ service cloud.firestore {
     function isAdmin() {
       return isSignedIn() 
         && (
-          request.auth.token.email in ['jagofeedmediatama@gmail.com', 'bapakeathfar@gmail.com'] ||
+          request.auth.token.email in ['jagofeed@gmail.com', 'jagofeedmediatama@gmail.com', 'bapakeathfar@gmail.com'] ||
           (
             exists(/databases/$(database)/documents/users/$(request.auth.uid))
             && (
@@ -90,23 +90,27 @@ service cloud.firestore {
       allow get: if isSignedIn();
     }
 
-    function isAgencyEmail() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'agency';
+    function isAgency() {
+      return isSignedIn() 
+        && (
+          exists(/databases/$(database)/documents/users/$(request.auth.uid))
+          && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'agency'
+        );
     }
 
     match /users/{userId} {
       // Allow users to find their skeleton document (invited by agency) by email query
       // Allow agencies to query their own team (by agencyId) OR search someone by email
+      allow get: if isOwner(userId) || isAdmin() || isAgency() || (isSignedIn() && (
+        (resource.data.email != null && resource.data.email.lower() == request.auth.token.email.lower()) ||
+        resource.data.agencyId == request.auth.uid
+      ));
+
       allow list: if isAdmin() 
+        || isAgency()
         || (isSignedIn() && resource.data.agencyId == request.auth.uid)
         || (isSignedIn() && resource.data.email != null 
             && resource.data.email.lower() == request.auth.token.email.lower());
-      
-      // Allow read if owner, admin, assigned agency, or matching email (for skeleton)
-      allow read: if isOwner(userId) || isAdmin() || (isSignedIn() && (
-        resource.data.email.lower() == request.auth.token.email.lower() ||
-        resource.data.agencyId == request.auth.uid
-      ));
       
       allow create: if (
         // Case 1: Super Admin Self-registration bootstrap/owner (using UID as document ID)
@@ -114,21 +118,20 @@ service cloud.firestore {
           && isValidId(userId) 
           && isValidUser(incoming())
           && incoming().uid == request.auth.uid
-          && request.auth.token.email in ['jagofeedmediatama@gmail.com', 'bapakeathfar@gmail.com']
+          && request.auth.token.email in ['jagofeed@gmail.com', 'jagofeedmediatama@gmail.com', 'bapakeathfar@gmail.com']
           && incoming().role == 'super-admin'
           && incoming().status == 'active'
         ) ||
         // Case 2: Agency creating skeleton user (random document ID)
-        (isSignedIn() 
-          && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-          && isAgencyEmail()
+        (isAgency()
           && incoming().agencyId == request.auth.uid
           && (incoming().role == 'user' || incoming().role == 'agency')
           && incoming().status == 'active'
           && isValidUser(incoming())
           && (
             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.licenseStatus == 'unlimited' ||
-            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.usageCount < get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userQuota
+            (!('usageCount' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data) || 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.usageCount < get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userQuota)
           )
         ) ||
         // Case 3: User migrating skeleton data to their own UID-based document
@@ -157,14 +160,15 @@ service cloud.firestore {
             // Agency/Admin self-maintenance or usage increment (restricted only to agencies with exact increment)
             (incoming().diff(existing()).affectedKeys().hasOnly(['usageCount']) 
               && existing().role == 'agency' 
-              && (incoming().usageCount == existing().usageCount + 1 || incoming().usageCount == existing().usageCount - 1)
+              && (
+                (!('usageCount' in existing()) && incoming().usageCount == 1) ||
+                (incoming().usageCount == existing().usageCount + 1 || incoming().usageCount == existing().usageCount - 1)
+              )
             ) ||
             (isAdminEmail() && incoming().role == 'super-admin' && incoming().status == 'active')
           )
         ) ||
-        (isSignedIn() 
-          && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-          && isAgencyEmail()
+        (isAgency()
           && isValidUser(incoming())
           && (
             // Action 1: Add to team (Updating another user)
@@ -174,14 +178,14 @@ service cloud.firestore {
               incoming().agencyId == request.auth.uid &&
               incoming().role == 'user' &&
               incoming().status == 'active' &&
-              incoming().diff(existing()).affectedKeys().hasOnly(['agencyId', 'role', 'status'])
+              incoming().diff(existing()).affectedKeys().hasOnly(['agencyId', 'role', 'status', 'removedByAgency'])
             ) ||
             // Action 2: Remove from team (Setting agencyId to null)
             (
               existing().agencyId == request.auth.uid &&
               (!('agencyId' in incoming()) || incoming().agencyId == null) &&
               incoming().status == 'pending' &&
-              incoming().diff(existing()).affectedKeys().hasOnly(['agencyId', 'status'])
+              incoming().diff(existing()).affectedKeys().hasOnly(['agencyId', 'status', 'removedByAgency'])
             )
           )
         ) || 
@@ -192,7 +196,7 @@ service cloud.firestore {
       // Allow user themselves, admin, or assigned agency (to delete skeleton)
       allow delete: if isAdmin() 
         || (isSignedIn() && existing().email == request.auth.token.email)
-        || (isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && isAgencyEmail() && existing().agencyId == request.auth.uid);
+        || (isAgency() && existing().agencyId == request.auth.uid);
     }
 
     match /lkpds/{lkpdId} {

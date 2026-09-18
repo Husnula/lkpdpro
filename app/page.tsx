@@ -308,8 +308,17 @@ function TeamManager({ userProfile }: { userProfile: any }) {
       
       if (!snap.empty) {
         const userDoc = snap.docs[0];
-        if (userDoc.data().agencyId) {
-          alert("User ini sudah terdaftar di tim lain.");
+        const userData = userDoc.data();
+        if (userData.agencyId) {
+          if (userData.agencyId === userProfile.uid) {
+            alert("User ini sudah terdaftar di tim Anda.");
+          } else {
+            alert("User ini sudah terdaftar di tim lain.");
+          }
+          return;
+        }
+        if (['admin', 'super-admin'].includes(userData.role)) {
+          alert("Tidak dapat menambahkan akun Admin sebagai anggota tim.");
           return;
         }
         await updateDoc(doc(db, "users", userDoc.id), {
