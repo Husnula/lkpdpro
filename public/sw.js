@@ -7,6 +7,5 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Pass-through for now to ensure online functionality
-  event.respondWith(fetch(event.request));
+  // Let the browser handle standard network requests natively
 });

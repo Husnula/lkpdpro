@@ -2372,7 +2372,7 @@ const [isExpandedMagicPrompt, setIsExpandedMagicPrompt] = useState(false);
               <h1 className="font-bold text-xl text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center">
                   <img src="/icon.png" alt="Logo" className="w-full h-full object-contain" onError={(e) => {
-                    (e.target as HTMLImageElement).src = 'https://aidukasi.net/wp-content/uploads/2023/12/logo-bulat.png';
+                    (e.target as HTMLImageElement).style.opacity = '0';
                   }} />
                 </div>
                 LKPD Pro
